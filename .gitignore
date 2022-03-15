@@ -56,3 +56,20 @@ fp-info-cache
 *.kicad_sch-bak
 \#auto_saved_files\#
 *-backups/
+
+# TEX outputs
+*.ist
+*.aux
+*.log
+*.synctex.gz
+slehokri_bp.pdf
+*.dvi
+*.bbl
+*.lot
+*.bcf
+*.blg
+*.idx
+*.lof
+*.xml
+*.toc
+*.txt
