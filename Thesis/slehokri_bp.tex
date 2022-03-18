@@ -1,0 +1,138 @@
+\documentclass[twoside]{ctuthesis}
+
+\ctusetup{
+	mainlanguage = english,
+	titlelanguage = english,
+	otherlanguages = {czech,english},
+	title-czech = {Vývoj RC auta řízeného pomocí STM32 microkontrolerů},
+	title-english = {Development of RC car controlled by STM32 microcontrollers},
+	doctype = B,
+	faculty = F3,
+	department-czech = {Katedra elektrických pohonů a trakce},
+	department-english = {Department of Electric Drives and Traction},
+	author = {Kristián Šlehofer},
+	supervisor = {Ing. Jan Stejskal},
+	supervisor-address = {Technická 1902/2,\\ Praha 6 \\ room: E1-107},
+	keywords-czech = {}, 	%TODO
+	keywords-english = {},	%TODO
+	day = 14,				%TODO
+	month = 1,				%TODO
+	year = 2022,				%TODO
+	%specification-file = {figs/zadani.pdf}, %TODO
+	%department-czech = {Kybernetika a robotika},
+	%department-english = {Cybernetics and robotics},
+	%front-specification=true,
+	front-list-of-figures=true, 
+	front-list-of-tables=true
+}
+
+\ctuprocess
+
+\addto\ctucaptionsczech{%
+	\def\supervisorname{Vedoucí}%
+	\def\subfieldofstudyname{Studijní program}%
+}
+
+\ctutemplateset{maketitle twocolumn default}{
+	\begin{twocolumnfrontmatterpage}
+		\ctutemplate{twocolumn.thanks}
+		\ctutemplate{twocolumn.declaration}
+		\ctutemplate{twocolumn.abstract.in.titlelanguage}
+		\ctutemplate{twocolumn.abstract.in.secondlanguage}
+		\ctutemplate{twocolumn.tableofcontents}
+		\ctutemplate{twocolumn.listoffigures}
+	\end{twocolumnfrontmatterpage}
+}
+
+% Theorem declarations, this is the reasonable default, anybody can do what they wish.
+% If you prefer theorems in italics rather than slanted, use \theoremstyle{plainit}
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{conjecture}[theorem]{Conjecture}
+
+\theoremstyle{note}
+\newtheorem*{remark*}{Remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\setlength{\parskip}{5ex plus 0.2ex minus 0.2ex}
+
+
+
+% Abstract in Czech
+\begin{abstract-czech}
+%TODO
+\end{abstract-czech}
+
+% Abstract in English
+\begin{abstract-english}
+%TODO
+\end{abstract-english}
+
+% Acknowledgements / Podekovani
+\begin{thanks}
+%TODO
+\end{thanks}
+
+% Declaration / Prohlaseni
+\begin{declaration}
+  %TODO
+
+\end{declaration}
+
+% Only for testing purposes
+\listfiles
+
+
+\usepackage[pagewise]{lineno}
+\usepackage{lipsum,blindtext}
+\usepackage{mathrsfs} % provides \mathscr used in the ridiculous examples
+\usepackage{amsmath}
+\usepackage{subcaption}
+\DeclareMathOperator{\atantwo}{atan2}
+\usepackage{float} 
+
+
+
+\usepackage{hyperref}
+\hypersetup{
+	pdftitle={STM32 RC car},
+	pdfauthor={Kristian Slehofer}
+}
+
+\usepackage{adjustbox}
+\usepackage{verbatim}
+\usepackage{tablefootnote} % for table footnotes
+
+\usepackage{xurl}	% for too long urls
+
+
+\begin{document}
+\maketitle
+
+
+\input{introduction}
+\input{stm32}
+
+
+
+
+\nocite{*}
+\bibliographystyle{unsrt}
+\bibliography{slehokri_bib}					%TODO
+%\ctutemplate{specification.as.chapter}		%TODO
+
+
+
+
+
+
+
+
+\end{document}
