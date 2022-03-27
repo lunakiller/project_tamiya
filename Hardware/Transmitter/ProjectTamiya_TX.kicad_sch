@@ -3613,7 +3613,7 @@
     (property "Reference" "Q2" (id 0) (at 191.135 130.175 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
-    (property "Value" "2N7002A" (id 1) (at 191.135 132.715 0)
+    (property "Value" "2N7002BK" (id 1) (at 191.135 132.715 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Footprint" "Package_TO_SOT_SMD:SOT-23" (id 2) (at 187.96 133.35 0)
@@ -3771,7 +3771,7 @@
     (property "Reference" "Q1" (id 0) (at 177.165 118.745 0)
       (effects (font (size 1.27 1.27)) (justify right))
     )
-    (property "Value" "2N7002A" (id 1) (at 177.165 121.285 0)
+    (property "Value" "2N7002BK" (id 1) (at 177.165 121.285 0)
       (effects (font (size 1.27 1.27)) (justify right))
     )
     (property "Footprint" "Package_TO_SOT_SMD:SOT-23" (id 2) (at 182.88 126.365 0)
@@ -4207,7 +4207,7 @@
     (property "Reference" "Q3" (id 0) (at 193.04 138.43 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
-    (property "Value" "2N7002A" (id 1) (at 193.04 140.97 0)
+    (property "Value" "2N7002BK" (id 1) (at 193.04 140.97 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Footprint" "Package_TO_SOT_SMD:SOT-23" (id 2) (at 193.04 140.335 0)
@@ -4837,13 +4837,13 @@
       (reference "J11") (unit 1) (value "NRF_power") (footprint "Connector_Wire:SolderWire-0.25sqmm_1x02_P4.2mm_D0.65mm_OD1.7mm_Relief")
     )
     (path "/4a4d9b9b-c50f-4ef0-8277-cdd97ceed0a6"
-      (reference "Q1") (unit 1) (value "2N7002A") (footprint "Package_TO_SOT_SMD:SOT-23")
+      (reference "Q1") (unit 1) (value "2N7002BK") (footprint "Package_TO_SOT_SMD:SOT-23")
     )
     (path "/2bb276a7-8ab2-4be3-9b32-a7ea311015c9"
-      (reference "Q2") (unit 1) (value "2N7002A") (footprint "Package_TO_SOT_SMD:SOT-23")
+      (reference "Q2") (unit 1) (value "2N7002BK") (footprint "Package_TO_SOT_SMD:SOT-23")
     )
     (path "/9cd35799-ec18-4e90-9608-c6514838a377"
-      (reference "Q3") (unit 1) (value "2N7002A") (footprint "Package_TO_SOT_SMD:SOT-23")
+      (reference "Q3") (unit 1) (value "2N7002BK") (footprint "Package_TO_SOT_SMD:SOT-23")
     )
     (path "/ab73a559-2422-46c8-acb5-de8dbb2705dd"
       (reference "R1") (unit 1) (value "10K") (footprint "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder")
