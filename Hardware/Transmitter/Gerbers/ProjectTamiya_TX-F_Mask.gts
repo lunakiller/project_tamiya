@@ -1,12 +1,12 @@
 G04 #@! TF.GenerationSoftware,KiCad,Pcbnew,(6.0.2)*
-G04 #@! TF.CreationDate,2022-03-27T15:57:34+02:00*
+G04 #@! TF.CreationDate,2022-03-28T19:54:07+02:00*
 G04 #@! TF.ProjectId,ProjectTamiya_TX,50726f6a-6563-4745-9461-6d6979615f54,rev?*
 G04 #@! TF.SameCoordinates,Original*
 G04 #@! TF.FileFunction,Soldermask,Top*
 G04 #@! TF.FilePolarity,Negative*
 %FSLAX46Y46*%
 G04 Gerber Fmt 4.6, Leading zero omitted, Abs format (unit mm)*
-G04 Created by KiCad (PCBNEW (6.0.2)) date 2022-03-27 15:57:34*
+G04 Created by KiCad (PCBNEW (6.0.2)) date 2022-03-28 19:54:07*
 %MOMM*%
 %LPD*%
 G01*
