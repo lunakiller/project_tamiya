@@ -51,6 +51,8 @@
 #include <string.h>
 #include <math.h>
 
+#include <stdio.h>    // temporary
+
 #include "project_tamiya.h"
 /* USER CODE END Includes */
 
@@ -115,7 +117,7 @@ uint8_t temp_receive_buffer[9] = {0};
 // ADC data buffer
 uint16_t adc_data_bat[ADC_BUFF_SIZE*2], adc_data_sply[ADC_BUFF_SIZE*2];
 // values
-uint32_t voltage, current, vrefint, supply5, temp, temp_frac;
+uint32_t voltage = 7500, current, vrefint, supply5, temp, temp_frac;
 uint16_t tx_freq = 0, tx_freq_cnt = 0;    // command frequency per sec
 /* USER CODE END PV */
 
@@ -359,7 +361,12 @@ int main(void)
         UART_SendInt(vdda);
         UART_SendStr("mV, ");
         UART_SendInt(supply5);
-        UART_SendStr("mV\n");
+        UART_SendStr("mV; ");
+        UART_SendStr("BLDC temp: ");
+        UART_SendInt(temp);
+        UART_SendStr(",");
+        UART_SendInt(temp_frac);
+        UART_SendStr(" C\n");
       }
 
       adc_data_bat_rdy = adc_data_sply_rdy = false;   // reset flags
@@ -379,14 +386,6 @@ int main(void)
       } else {
         temp_frac = 0;
       }
-
-      if(UART_debug) {
-        UART_SendStr("BLDC temp: ");
-        UART_SendInt(temp);
-        UART_SendStr(",");
-        UART_SendInt(temp_frac);
-        UART_SendStr(" C\n");
-      }
       
       temp_received = false;    // reset flag
 
@@ -397,6 +396,12 @@ int main(void)
       ssd1306_Fill(Black);
       OLED_TempInfo(10, 0, temp, temp_frac, White, Font_7x10);
       OLED_BatInfo(90, 0, voltage, White, Font_7x10);
+      ssd1306_SetCursor(5, 20);
+      ssd1306_WriteString("freq ", Font_7x10, White);
+      char ascii_freq[6];
+      snprintf(ascii_freq, 6, "%d", tx_freq);
+      ssd1306_WriteString(ascii_freq, Font_7x10, White);
+      ssd1306_WriteString(" msgs/sec", Font_7x10, White);
       ssd1306_UpdateScreen();
 
       display_refresh = false;    // reset flag
