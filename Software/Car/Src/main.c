@@ -14,15 +14,13 @@
   *                     - safety timer (250ms no command -> car stops)
   *                     - battery voltage measurements (calibrated)
   *                     - current measurements (needs calibration)
+  *                     - BLDC temperature measurements
   *                     - UART debug prints controled by Switch1
   *                     - OLED display with basic info (batt voltage and bldc temp)
   * 
   *                   TODO:
-  *                     - implement ADC "double buffer"
-  *                       - split buffer in half, let the half fill, then process
-  *                         it while the other half is being filled
   *                     - OLED wakeup button
-  *                     - temperature and gyro/accel measurements
+  *                     - gyro/accel measurements
   *                     - SD card logging (with auto-splitting files)
   *                       - triggered by Switch2
   *                     - calibrate current sensor (VBAT voltage?)
@@ -51,6 +49,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
 #include <string.h>
+#include <math.h>
 
 #include "project_tamiya.h"
 /* USER CODE END Includes */
@@ -72,7 +71,7 @@
 #define RES_47K_GND       46600.0
 #define SPLY_DIVIDER      (RES_47K_5V + RES_47K_GND) / RES_47K_GND // constant to compute supply voltage
 
-#define VREFINT_CAL_ADDR  0x1FFFF7BA      // internal reference voltage calibration values
+#define VREFINT_CAL_ADDR  0x1FFFF7BA      // internal reference voltage calibration values address
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -105,14 +104,18 @@ DMA_HandleTypeDef hdma_usart2_tx;
 
 /* USER CODE BEGIN PV */
 // flags
-bool NRF_IRQ = false, adc_data_rdy = false, UART_debug = false, display_refresh = false;
+bool NRF_IRQ = false, adc_data_bat_rdy = false, UART_debug = false, adc_data_sply_rdy = false;
+bool display_refresh = false, temp_received = false, temp_conv_ready = false;
 
 uint16_t STATUS_LED = LED_G_Pin;
+
+// temperature data buffer
+uint8_t temp_receive_buffer[9] = {0};
 
 // ADC data buffer
 uint16_t adc_data_bat[ADC_BUFF_SIZE*2], adc_data_sply[ADC_BUFF_SIZE*2];
 // values
-uint32_t voltage, current, vrefint, supply5;
+uint32_t voltage, current, vrefint, supply5, temp, temp_frac;
 uint16_t tx_freq = 0, tx_freq_cnt = 0;    // command frequency per sec
 /* USER CODE END PV */
 
@@ -137,8 +140,15 @@ static void MX_ADC2_Init(void);
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc);
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart);
 
 void BlinkLeds(void);
+void OW_Complete(void);
+void OW_Error(void);
+void DS_Convert(void);
+void DS_Read(uint8_t* buffer);
+uint16_t DS_GetIntTemp(uint16_t temp);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -210,6 +220,12 @@ int main(void)
   // __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_2, PT_RC_NEUTRAL);   // reset servo
   // __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_3, PT_RC_NEUTRAL);   // reset bldc
 
+  // init temperature sensor
+  OneWire_Init();
+  OneWire_SetCallback(OW_Complete, OW_Error);
+  // request first temperature conversion (~900ms)
+  DS_Convert();
+
   // blink RGB led
   BlinkLeds();
 
@@ -228,8 +244,8 @@ int main(void)
   uint16_t vrefint_cal = *((uint16_t*)VREFINT_CAL_ADDR);
 
   // init communication module
-  // if(!nRF24_InitModule())
-  //   Error_Handler();
+  if(!nRF24_InitModule())
+    Error_Handler();
 
   // start timers
   HAL_TIM_Base_Start_IT(&htim1);    // 50hz data
@@ -308,7 +324,7 @@ int main(void)
       }
     }
 
-    if(adc_data_rdy) {    // ADC conversion complete interrupt
+    if(adc_data_bat_rdy && adc_data_sply_rdy) {    // ADC conversion complete interrupt
       voltage = current = vrefint = supply5 = 0;   // reset
       for(int i = 0; i < 2*ADC_BUFF_SIZE; i += 2) {   // average values
         voltage += (uint16_t)adc_data_bat[i + 0];
@@ -325,13 +341,14 @@ int main(void)
       uint16_t vdda = 3300 * vrefint_cal / vrefint;
 
       // calculate voltage on pin from 12bit binary
+      // 24mV is a magic constant, it is an offset between BOOT1 and actual MCU pin
       supply5 = supply5 * vdda / 4095 + 24;    // calculate supply voltage (5V) 
       // uint16_t supply5_raw = supply5;     // 2517 boot1, 2493 mcu pin
       supply5 *= SPLY_DIVIDER;
       voltage = voltage * vdda / 4095;    // calculate the actual battery voltage
       voltage *= BAT_DIVIDER;
       current = current * vdda / 4095;    // calculate current
-      current = (supply5 - current) * 1000 / 66.0;   
+      current = ((supply5 / 2.0) - current) * 1000 / 66.0;   
 
       if(UART_debug) {
         UART_SendStr("BAT: ");
@@ -345,18 +362,45 @@ int main(void)
         UART_SendStr("mV\n");
       }
 
-      adc_data_rdy = false;   // reset flag
+      adc_data_bat_rdy = adc_data_sply_rdy = false;   // reset flags
+    }
+
+    if(temp_conv_ready) {      // temperature conversion ready
+      memset(temp_receive_buffer, 0, sizeof(temp_receive_buffer));
+      DS_Read((uint8_t*)&temp_receive_buffer);
+    }
+
+    if(temp_received) {        // temperature received    
+      uint16_t temp_raw = (temp_receive_buffer[1] << 8) | temp_receive_buffer[0];
+      temp = DS_GetIntTemp(temp_raw);   // convert integer temperature
+
+      if((temp_raw & (0x8)) == 0x8) {   // check bit associated with 2^(-1)
+        temp_frac = 5;
+      } else {
+        temp_frac = 0;
+      }
+
+      if(UART_debug) {
+        UART_SendStr("BLDC temp: ");
+        UART_SendInt(temp);
+        UART_SendStr(",");
+        UART_SendInt(temp_frac);
+        UART_SendStr(" C\n");
+      }
+      
+      temp_received = false;    // reset flag
+
+      DS_Convert();   // start next conversion
     }
 
     if(display_refresh) {   // OLED display refresh interrupt
       ssd1306_Fill(Black);
-      OLED_TempInfo(10, 0, 99, 9, White, Font_7x10);
+      OLED_TempInfo(10, 0, temp, temp_frac, White, Font_7x10);
       OLED_BatInfo(90, 0, voltage, White, Font_7x10);
       ssd1306_UpdateScreen();
 
       display_refresh = false;    // reset flag
     }    
-
 
     /* USER CODE END WHILE */
 
@@ -1219,18 +1263,34 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     else {
       STATUS_LED = LED_G_Pin;
     }
+
+    // set temp conv flag
+    temp_conv_ready = true;
   }
 }
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
   if(hadc->Instance == ADC1) {
-    adc_data_rdy = true;
+    adc_data_bat_rdy = true;
 
     // CLEAR_BIT(ADC_Common->CCR, ADC12_CCR_VBATEN);
     // UART_SendStr("ADC conv cplt\n");
   }
   else if(hadc->Instance == ADC2) {
-    // do nothing, as we need data also from ADC1, which will be slower
+    adc_data_sply_rdy = true;
+  }
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+  if(huart->Instance == USART2) {
+    HAL_GPIO_TogglePin(GPIOC, LED1_Pin);
+    OneWire_RxCpltCallback();
+  }
+}
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
+  if(huart->Instance == USART2) {
+    OneWire_TxCpltCallback();
   }
 }
 /* -------------------------------------------------------------------------- */
@@ -1248,6 +1308,39 @@ void BlinkLeds(void) {
   HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_SET);
   HAL_Delay(250);
   HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET);
+}
+
+void OW_Complete(void) {
+  // UART_SendStr("OneWire transfer completed!\n");
+  temp_received = true;
+}
+
+void OW_Error(void) {
+  Error_Handler();
+}
+
+void DS_Convert(void) {   // init temperature measurement
+  OneWire_Execute(0xcc,0,0x44,0);
+  HAL_GPIO_WritePin(GPIOC, LED1_Pin, GPIO_PIN_RESET);
+}
+
+void DS_Read(uint8_t* buffer) {   // read converted temperature
+  temp_conv_ready = false;
+  OneWire_Execute(0xcc,0,0xbe,buffer);
+}
+
+#define DS_INT_MASK 0x7F0
+#define DS_SIGN_MASK 0x800
+
+uint16_t DS_GetIntTemp(uint16_t temp) {    // convert raw temp to int
+  uint16_t converted_temp = 0;
+  temp &= DS_INT_MASK;
+  for(int k = 0; k < 8; ++k) {
+    converted_temp += ((temp >> (4 + k)) & 0x01) ? pow(2, k) : 0;
+  }
+  if(((temp & DS_SIGN_MASK) >> 11) == 0x01)
+    converted_temp *= -1;
+  return converted_temp;
 }
 /* -------------------------------------------------------------------------- */
 

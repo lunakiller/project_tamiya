@@ -13,7 +13,8 @@
 #define __PLATFORM_H
 
 #include "main.h"
-#include "tamiya_car.h"
+#include "tamiya_car.h"     // logo
+#include "ds18b20.h"        // temperature
 
 #define GREETING "\n\n-- ProjectTamiya - Car --\n"
 
