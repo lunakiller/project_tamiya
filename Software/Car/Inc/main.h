@@ -86,6 +86,8 @@ void Error_Handler(void);
 #define NRF_CE_GPIO_Port GPIOB
 #define NRF_CSN_Pin GPIO_PIN_1
 #define NRF_CSN_GPIO_Port GPIOB
+#define SPLY_Pin GPIO_PIN_2
+#define SPLY_GPIO_Port GPIOB
 #define SD_CS_Pin GPIO_PIN_12
 #define SD_CS_GPIO_Port GPIOB
 #define SD_SCK_Pin GPIO_PIN_13

@@ -15,19 +15,20 @@
   *                     - battery voltage measurements (calibrated)
   *                     - current measurements (needs calibration)
   *                     - UART debug prints controled by Switch1
+  *                     - OLED display with basic info (batt voltage and bldc temp)
   * 
   *                   TODO:
   *                     - implement ADC "double buffer"
   *                       - split buffer in half, let the half fill, then process
   *                         it while the other half is being filled
-  *                     - OLED status display (with wakeup button)
+  *                     - OLED wakeup button
   *                     - temperature and gyro/accel measurements
   *                     - SD card logging (with auto-splitting files)
   *                       - triggered by Switch2
   *                     - calibrate current sensor (VBAT voltage?)
   *                     
   * @author         : Kristian Slehofer
-  * @date           : 19. 4. 2022
+  * @date           : 22. 4. 2022
   ******************************************************************************
   * @attention
   *
@@ -61,11 +62,17 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define ADC_BUFF_SIZE 1024
+#define ADC_BUFF_SIZE     512
 
-#define RES_22K 22050.0                           // real resistor values
-#define RES_10K 9710.0 
-#define DIVIDER (RES_22K + RES_10K) / RES_10K     // constant to compute battery voltage
+#define RES_22K           22050.0         // real resistor values
+#define RES_10K           9710.0 
+#define BAT_DIVIDER       (RES_22K + RES_10K) / RES_10K // constant to compute battery voltage
+
+#define RES_47K_5V        46710.0
+#define RES_47K_GND       46600.0
+#define SPLY_DIVIDER      (RES_47K_5V + RES_47K_GND) / RES_47K_GND // constant to compute supply voltage
+
+#define VREFINT_CAL_ADDR  0x1FFFF7BA      // internal reference voltage calibration values
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -75,7 +82,9 @@
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
+ADC_HandleTypeDef hadc2;
 DMA_HandleTypeDef hdma_adc1;
+DMA_HandleTypeDef hdma_adc2;
 
 I2C_HandleTypeDef hi2c1;
 I2C_HandleTypeDef hi2c2;
@@ -84,7 +93,9 @@ SPI_HandleTypeDef hspi1;
 SPI_HandleTypeDef hspi2;
 
 TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim8;
+TIM_HandleTypeDef htim16;
 TIM_HandleTypeDef htim17;
 
 UART_HandleTypeDef huart2;
@@ -94,11 +105,15 @@ DMA_HandleTypeDef hdma_usart2_tx;
 
 /* USER CODE BEGIN PV */
 // flags
-bool NRF_IRQ = false, adc_data_rdy = false, UART_debug = false;
+bool NRF_IRQ = false, adc_data_rdy = false, UART_debug = false, display_refresh = false;
 
 uint16_t STATUS_LED = LED_G_Pin;
 
-uint16_t adc_data[ADC_BUFF_SIZE*2];
+// ADC data buffer
+uint16_t adc_data_bat[ADC_BUFF_SIZE*2], adc_data_sply[ADC_BUFF_SIZE*2];
+// values
+uint32_t voltage, current, vrefint, supply5;
+uint16_t tx_freq = 0, tx_freq_cnt = 0;    // command frequency per sec
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -115,6 +130,9 @@ static void MX_TIM8_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM17_Init(void);
+static void MX_TIM6_Init(void);
+static void MX_TIM16_Init(void);
+static void MX_ADC2_Init(void);
 /* USER CODE BEGIN PFP */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
@@ -167,10 +185,18 @@ int main(void)
   MX_FATFS_Init();
   MX_TIM1_Init();
   MX_TIM17_Init();
+  MX_TIM6_Init();
+  MX_TIM16_Init();
+  MX_ADC2_Init();
   /* USER CODE BEGIN 2 */
 
   // turn on LED
   HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+
+  // init display
+  ssd1306_Init();
+  ssd1306_DrawXBitmap(0, 0, tamiya_car_bits, tamiya_car_width, tamiya_car_height, White);
+  ssd1306_UpdateScreen();
 
   // initialize UART debug only if switch is pulled low
   if(HAL_GPIO_ReadPin(SW1_GPIO_Port, SW1_Pin) == GPIO_PIN_RESET) {
@@ -194,14 +220,22 @@ int main(void)
   if(HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED) !=  HAL_OK) {
     Error_Handler();
   }
+  if(HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED) !=  HAL_OK) {
+    Error_Handler();
+  }
+
+  // get internal ref voltage calibration value
+  uint16_t vrefint_cal = *((uint16_t*)VREFINT_CAL_ADDR);
 
   // init communication module
-  if(!nRF24_InitModule())
-    Error_Handler();
+  // if(!nRF24_InitModule())
+  //   Error_Handler();
 
   // start timers
   HAL_TIM_Base_Start_IT(&htim1);    // 50hz data
-  HAL_TIM_Base_Start_IT(&htim17);   // safety timer (250ms)
+  HAL_TIM_Base_Start_IT(&htim17);   // safety timer (4Hz)
+  HAL_TIM_Base_Start_IT(&htim16);   // OLED display refresh (4Hz)
+  HAL_TIM_Base_Start_IT(&htim6);    // per-sec statistics
 
   /* USER CODE END 2 */
 
@@ -211,12 +245,21 @@ int main(void)
   uint8_t status, size;
   // nRF24 buffer, ack placeholder
   uint8_t buffer[PT_nRF24_PACKET_SIZE], ack[PT_nRF24_ACK_SIZE] = "ACK";
-  uint32_t voltage = 0, current = 0, supply = 0;
+  
   // control values
   int16_t throttle = 0, steer = 0;
 
   // turn off the led as the initialization is done
   HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+
+  // enable cycle counter
+  // CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  // DWT->CYCCNT = 0;
+  // DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
+  // volatile unsigned long t1 = 0, t2 = 0;
+  // t1 = DWT->CYCCNT;
+  // t2 = DWT->CYCCNT;
 
   while (1)
   {
@@ -249,6 +292,8 @@ int main(void)
           __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_3, PT_RC_NEUTRAL - throttle);
 
           __HAL_TIM_SET_COUNTER(&htim17, 0);    // reset safety timer
+
+          tx_freq_cnt++;
         }
 
       // UART_SendStr("\n----------------------\nPayload:\n");
@@ -264,38 +309,53 @@ int main(void)
     }
 
     if(adc_data_rdy) {    // ADC conversion complete interrupt
-      voltage = current = supply = 0;   // reset
+      voltage = current = vrefint = supply5 = 0;   // reset
       for(int i = 0; i < 2*ADC_BUFF_SIZE; i += 2) {   // average values
-        voltage += (uint16_t)adc_data[i + 0];
-        current += (uint16_t)adc_data[i + 1];
+        voltage += (uint16_t)adc_data_bat[i + 0];
+        current += (uint16_t)adc_data_bat[i + 1];
+        vrefint += (uint16_t)adc_data_sply[i + 0];
+        supply5 += (uint16_t)adc_data_sply[i + 1];
       }
       voltage /= ADC_BUFF_SIZE;
       current /= ADC_BUFF_SIZE;
+      vrefint /= ADC_BUFF_SIZE;
+      supply5 /= ADC_BUFF_SIZE;
+
+      //calculate VDDA
+      uint16_t vdda = 3300 * vrefint_cal / vrefint;
 
       // calculate voltage on pin from 12bit binary
-      voltage = voltage * 3320 / 4095;
-      current = current * 3320 / 4095;
-      voltage = voltage * DIVIDER;    // calculate the actual battery voltage
-      current = (2507 - current) * 1000 / 66.0;   // calculate current
+      supply5 = supply5 * vdda / 4095 + 24;    // calculate supply voltage (5V) 
+      // uint16_t supply5_raw = supply5;     // 2517 boot1, 2493 mcu pin
+      supply5 *= SPLY_DIVIDER;
+      voltage = voltage * vdda / 4095;    // calculate the actual battery voltage
+      voltage *= BAT_DIVIDER;
+      current = current * vdda / 4095;    // calculate current
+      current = (supply5 - current) * 1000 / 66.0;   
 
       if(UART_debug) {
-        UART_SendStr("VOLTAGE | CURRENT\n");
+        UART_SendStr("BAT: ");
         UART_SendInt(voltage);
-        UART_SendStr("mV    ");
+        UART_SendStr("mV, ");
         UART_SendInt(current);
-        UART_SendStr("mA\n");
+        UART_SendStr("mA; SUPPLY: ");
+        UART_SendInt(vdda);
+        UART_SendStr("mV, ");
+        UART_SendInt(supply5);
+        UART_SendStr("mV\n");
       }
 
       adc_data_rdy = false;   // reset flag
     }
 
-    // change status led color according to voltage level
-    if(voltage < 6900) {
-      STATUS_LED = LED_R_Pin;
-    }
-    else {
-      STATUS_LED = LED_G_Pin;
-    }
+    if(display_refresh) {   // OLED display refresh interrupt
+      ssd1306_Fill(Black);
+      OLED_TempInfo(10, 0, 99, 9, White, Font_7x10);
+      OLED_BatInfo(90, 0, voltage, White, Font_7x10);
+      ssd1306_UpdateScreen();
+
+      display_refresh = false;    // reset flag
+    }    
 
 
     /* USER CODE END WHILE */
@@ -435,6 +495,70 @@ static void MX_ADC1_Init(void)
 }
 
 /**
+  * @brief ADC2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC2_Init(void)
+{
+
+  /* USER CODE BEGIN ADC2_Init 0 */
+
+  /* USER CODE END ADC2_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC2_Init 1 */
+
+  /* USER CODE END ADC2_Init 1 */
+  /** Common config
+  */
+  hadc2.Instance = ADC2;
+  hadc2.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
+  hadc2.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc2.Init.ScanConvMode = ADC_SCAN_ENABLE;
+  hadc2.Init.ContinuousConvMode = ENABLE;
+  hadc2.Init.DiscontinuousConvMode = DISABLE;
+  hadc2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc2.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc2.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc2.Init.NbrOfConversion = 2;
+  hadc2.Init.DMAContinuousRequests = DISABLE;
+  hadc2.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc2.Init.LowPowerAutoWait = DISABLE;
+  hadc2.Init.Overrun = ADC_OVR_DATA_OVERWRITTEN;
+  if (HAL_ADC_Init(&hadc2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_VREFINT;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SingleDiff = ADC_SINGLE_ENDED;
+  sConfig.SamplingTime = ADC_SAMPLETIME_181CYCLES_5;
+  sConfig.OffsetNumber = ADC_OFFSET_NONE;
+  sConfig.Offset = 0;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_12;
+  sConfig.Rank = ADC_REGULAR_RANK_2;
+  sConfig.SamplingTime = ADC_SAMPLETIME_601CYCLES_5;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC2_Init 2 */
+
+  /* USER CODE END ADC2_Init 2 */
+
+}
+
+/**
   * @brief I2C1 Initialization Function
   * @param None
   * @retval None
@@ -496,7 +620,7 @@ static void MX_I2C2_Init(void)
 
   /* USER CODE END I2C2_Init 1 */
   hi2c2.Instance = I2C2;
-  hi2c2.Init.Timing = 0x2000090E;
+  hi2c2.Init.Timing = 0x00000001;
   hi2c2.Init.OwnAddress1 = 0;
   hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
@@ -520,6 +644,9 @@ static void MX_I2C2_Init(void)
   {
     Error_Handler();
   }
+  /** I2C Fast mode Plus enable
+  */
+  __HAL_SYSCFG_FASTMODEPLUS_ENABLE(I2C_FASTMODEPLUS_I2C2);
   /* USER CODE BEGIN I2C2_Init 2 */
 
   /* USER CODE END I2C2_Init 2 */
@@ -676,6 +803,44 @@ static void MX_TIM1_Init(void)
 }
 
 /**
+  * @brief TIM6 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM6_Init(void)
+{
+
+  /* USER CODE BEGIN TIM6_Init 0 */
+
+  /* USER CODE END TIM6_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM6_Init 1 */
+
+  /* USER CODE END TIM6_Init 1 */
+  htim6.Instance = TIM6;
+  htim6.Init.Prescaler = 7199;
+  htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim6.Init.Period = 9999;
+  htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM6_Init 2 */
+
+  /* USER CODE END TIM6_Init 2 */
+
+}
+
+/**
   * @brief TIM8 Initialization Function
   * @param None
   * @retval None
@@ -747,6 +912,38 @@ static void MX_TIM8_Init(void)
 
   /* USER CODE END TIM8_Init 2 */
   HAL_TIM_MspPostInit(&htim8);
+
+}
+
+/**
+  * @brief TIM16 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM16_Init(void)
+{
+
+  /* USER CODE BEGIN TIM16_Init 0 */
+
+  /* USER CODE END TIM16_Init 0 */
+
+  /* USER CODE BEGIN TIM16_Init 1 */
+
+  /* USER CODE END TIM16_Init 1 */
+  htim16.Instance = TIM16;
+  htim16.Init.Prescaler = 7199;
+  htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim16.Init.Period = 2499;
+  htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim16.Init.RepetitionCounter = 0;
+  htim16.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim16) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM16_Init 2 */
+
+  /* USER CODE END TIM16_Init 2 */
 
 }
 
@@ -860,6 +1057,7 @@ static void MX_DMA_Init(void)
 
   /* DMA controller clock enable */
   __HAL_RCC_DMA1_CLK_ENABLE();
+  __HAL_RCC_DMA2_CLK_ENABLE();
 
   /* DMA interrupt init */
   /* DMA1_Channel1_IRQn interrupt configuration */
@@ -871,6 +1069,9 @@ static void MX_DMA_Init(void)
   /* DMA1_Channel7_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel7_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel7_IRQn);
+  /* DMA2_Channel1_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Channel1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Channel1_IRQn);
 
 }
 
@@ -930,12 +1131,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PB2 */
-  GPIO_InitStruct.Pin = GPIO_PIN_2;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
   /*Configure GPIO pins : SW1_Pin SW2_Pin */
   GPIO_InitStruct.Pin = SW1_Pin|SW2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
@@ -949,7 +1144,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI4_IRQn, 1, 0);
+  HAL_NVIC_SetPriority(EXTI4_IRQn, 7, 0);
   HAL_NVIC_EnableIRQ(EXTI4_IRQn);
 
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
@@ -985,11 +1180,15 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
       UART_debug = false;
     }
   }
+  else if(GPIO_Pin == SW2_Pin) {    // switch 2
+    UART_SendStr("SW2\n");
+  }
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   if(htim->Instance == TIM1) {    // data timer interrupt
-    HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_data, ADC_BUFF_SIZE*2);
+    HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_data_bat, ADC_BUFF_SIZE*2);
+    HAL_ADC_Start_DMA(&hadc2, (uint32_t*)adc_data_sply, ADC_BUFF_SIZE*2);
 
     // SET_BIT(ADC_Common->CCR, ADC_CCR_VBATEN);
     // UART_SendStr("TIM1 IRQ\n");
@@ -1006,6 +1205,21 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
 
     UART_SendStr("NO SIGNAL!\n");
   }
+  else if(htim->Instance == TIM16) {
+    display_refresh = true;
+  }
+  else if(htim->Instance == TIM6) {    // 1Hz timer interrupt
+    tx_freq = tx_freq_cnt;    // save value
+    tx_freq_cnt = 0;    // reset counter
+
+    // change status led color according to voltage level
+    if(voltage < 6800) {
+      STATUS_LED = LED_R_Pin;
+    }
+    else {
+      STATUS_LED = LED_G_Pin;
+    }
+  }
 }
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
@@ -1014,6 +1228,9 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
 
     // CLEAR_BIT(ADC_Common->CCR, ADC12_CCR_VBATEN);
     // UART_SendStr("ADC conv cplt\n");
+  }
+  else if(hadc->Instance == ADC2) {
+    // do nothing, as we need data also from ADC1, which will be slower
   }
 }
 /* -------------------------------------------------------------------------- */
@@ -1044,7 +1261,10 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-
+  while(1) {
+    HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+    HAL_Delay(500);
+  }
   /* USER CODE END Error_Handler_Debug */
 }
 
