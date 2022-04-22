@@ -4,7 +4,7 @@
   * @brief          : Common functions implementations
   *                     
   * @author         : Kristian Slehofer
-  * @date           : 19. 4. 2022
+  * @date           : 22. 4. 2022
   ******************************************************************************
   */
 
@@ -200,6 +200,55 @@ void nRF24_GetCounters(uint8_t* plos, uint8_t* arc) {
     return;
 }
 #endif // nRF24_TX
+
+/* OLED helper functions */
+void OLED_BatInfo(uint8_t x, uint8_t y, uint16_t milivolts, SSD1306_COLOR color, FontDef font) {
+  if(milivolts > 8050) {
+    ssd1306_DrawPixel(x + 2, y + 3, White);
+    ssd1306_DrawPixel(x + 3, y + 3, White);
+  }
+  if(milivolts > 7650) {
+    ssd1306_DrawPixel(x + 2, y + 5, White);
+    ssd1306_DrawPixel(x + 3, y + 5, White);
+  }
+  if(milivolts > 7350) {
+    ssd1306_DrawPixel(x + 2, y + 7, White);
+    ssd1306_DrawPixel(x + 3, y + 7, White);
+  }
+  if(milivolts > 7000) {
+    ssd1306_DrawPixel(x + 2, y + 9, White);
+    ssd1306_DrawPixel(x + 3, y + 9, White);
+  }
+  if(milivolts < 6800) {
+    ssd1306_DrawXBitmap(x, y, batoff_logo_bits, 6, 12, White);
+  } else {
+    ssd1306_DrawXBitmap(x, y, bat_logo_bits, 6, 12, White);
+  }
+
+  char ascii_bat[10];
+  uint8_t volts = milivolts / 1000;
+  milivolts = ((milivolts % 1000) + 50) / 100;
+    if(milivolts > 9) milivolts = 9;
+  snprintf(ascii_bat, 10, "%u,%uV", volts, milivolts);
+  ssd1306_SetCursor(x + 8, y + 3);
+  ssd1306_WriteString(ascii_bat, font, White);
+} 
+
+void OLED_TempInfo(uint8_t x, uint8_t y, uint8_t temp, uint8_t frac, SSD1306_COLOR color, FontDef font) {
+  char ascii_temp[8];
+  snprintf(ascii_temp, 8, "%u", temp);
+    ssd1306_DrawXBitmap(x, y, temp_logo_bits, 13, 12, White);
+    ssd1306_SetCursor(x + 15, y + 3);
+    ssd1306_WriteString(ascii_temp, font, White);
+  if(frac > 0 && frac < 10) {
+    ssd1306_WriteChar(',', font, White);
+    ssd1306_WriteChar('0' + frac, font, White);
+  }
+  ssd1306_WriteChar(' ', font, White);
+  ssd1306_WriteChar('C', font, White);
+  ssd1306_MoveCursor(-(font.FontWidth + 4), 0);
+  ssd1306_WriteCircle(White);
+}
 
 
 /* UART helper functions */
