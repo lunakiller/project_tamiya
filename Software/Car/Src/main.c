@@ -262,7 +262,7 @@ int main(void)
 
   uint8_t status, size;
   // nRF24 buffer, ack placeholder
-  uint8_t buffer[PT_nRF24_PACKET_SIZE], ack[PT_nRF24_ACK_SIZE] = "ACK";
+  uint8_t buffer[PT_nRF24_PACKET_SIZE], ack[PT_nRF24_ACK_SIZE];
   
   // control values
   int16_t throttle = 0, steer = 0;
@@ -285,6 +285,10 @@ int main(void)
       NRF_IRQ = false;    // reset flag
       status = nRF24_GetStatus();
       if(status & nRF24_FLAG_RX_DR) {    // data in RX data register
+        memmove(&ack[0], &voltage, sizeof(uint16_t));   // prepare ACK packet
+        memmove(&ack[2], &temp, sizeof(uint8_t));
+        memmove(&ack[3], &temp_frac, sizeof(uint8_t));
+        
         nRF24_ReceivePacket(buffer, &size, ack);
 
         if(size == PT_nRF24_PACKET_SIZE) {
@@ -1359,6 +1363,10 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
+  HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET);
+
   while(1) {
     HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
     HAL_Delay(500);
