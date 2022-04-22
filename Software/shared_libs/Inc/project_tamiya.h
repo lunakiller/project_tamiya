@@ -15,9 +15,9 @@
 #include "platform.h"
 #include "nrf24.h"
 #include "ssd1306.h"
-#include "batt_logo.h"
-#include "battoff_logo.h"
-#include "temp_logo.h"
+#include "batt_logo.h"        // OLED battery logo
+#include "battoff_logo.h"     // OLED drained battery logo
+#include "temp_logo.h"        // OLED temperature logo
 
 // nRF24 configuration
 #define PT_nRF24_CHANNEL      115    // Channel frequency = (2400 + RF_CHANNEL)

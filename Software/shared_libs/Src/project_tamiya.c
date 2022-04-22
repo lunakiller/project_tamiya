@@ -203,7 +203,7 @@ void nRF24_GetCounters(uint8_t* plos, uint8_t* arc) {
 
 /* OLED helper functions */
 void OLED_BatInfo(uint8_t x, uint8_t y, uint16_t milivolts, SSD1306_COLOR color, FontDef font) {
-  if(milivolts > 8050) {
+  if(milivolts > 8050) {    // battery visualization
     ssd1306_DrawPixel(x + 2, y + 3, White);
     ssd1306_DrawPixel(x + 3, y + 3, White);
   }
@@ -225,9 +225,9 @@ void OLED_BatInfo(uint8_t x, uint8_t y, uint16_t milivolts, SSD1306_COLOR color,
     ssd1306_DrawXBitmap(x, y, bat_logo_bits, 6, 12, White);
   }
 
-  char ascii_bat[10];
+  char ascii_bat[10];   // string buffer
   uint8_t volts = milivolts / 1000;
-  milivolts = ((milivolts % 1000) + 50) / 100;
+  milivolts = ((milivolts % 1000) + 50) / 100;    // rounding
     if(milivolts > 9) milivolts = 9;
   snprintf(ascii_bat, 10, "%u,%uV", volts, milivolts);
   ssd1306_SetCursor(x + 8, y + 3);
@@ -237,9 +237,9 @@ void OLED_BatInfo(uint8_t x, uint8_t y, uint16_t milivolts, SSD1306_COLOR color,
 void OLED_TempInfo(uint8_t x, uint8_t y, uint8_t temp, uint8_t frac, SSD1306_COLOR color, FontDef font) {
   char ascii_temp[8];
   snprintf(ascii_temp, 8, "%u", temp);
-    ssd1306_DrawXBitmap(x, y, temp_logo_bits, 13, 12, White);
-    ssd1306_SetCursor(x + 15, y + 3);
-    ssd1306_WriteString(ascii_temp, font, White);
+  ssd1306_DrawXBitmap(x, y, temp_logo_bits, 13, 12, White);
+  ssd1306_SetCursor(x + 15, y + 3);
+  ssd1306_WriteString(ascii_temp, font, White);
   if(frac > 0 && frac < 10) {
     ssd1306_WriteChar(',', font, White);
     ssd1306_WriteChar('0' + frac, font, White);
