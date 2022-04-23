@@ -7,8 +7,7 @@
   *                     - communication
   *                     - driving (both servo & bldc control)
   *                     - LEDs
-  *                       - green:  communication OK, batt voltage >6.9V
-  *                       - orange: communication OK, batt voltage ~6.9V
+  *                       - green:  communication OK, batt voltage >=6.9V
   *                       - red:    communication OK, batt voltage <6.9V
   *                       - blue:   no signal
   *                     - safety timer (250ms no command -> car stops)
@@ -26,7 +25,7 @@
   *                     - calibrate current sensor (VBAT voltage?)
   *                     
   * @author         : Kristian Slehofer
-  * @date           : 22. 4. 2022
+  * @date           : 23. 4. 2022
   ******************************************************************************
   * @attention
   *
@@ -1266,7 +1265,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     tx_freq_cnt = 0;    // reset counter
 
     // change status led color according to voltage level
-    if(voltage < 6800) {
+    if(voltage < 6800 && STATUS_LED != LED_R_Pin) {
+      // turn off green LED
+      HAL_GPIO_WritePin(GPIOA, LED_G_Pin, GPIO_PIN_RESET);
       STATUS_LED = LED_R_Pin;
     }
     else {
