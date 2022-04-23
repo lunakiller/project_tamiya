@@ -13,18 +13,23 @@
 #define __PLATFORM_H
 
 #include "main.h"
+#include "tamiya_big.h"     // logo
+#include "car_logo.h"
 
 #define GREETING "\n\n-- ProjectTamiya - Transmitter --\n"
 
 #define nRF24_TX
-#define nRF24_TIMEOUT 250
-#define UART_TIMEOUT 250
+#define nRF24_TIMEOUT     250
+#define UART_TIMEOUT      250
 
-extern UART_HandleTypeDef huart2;
-#define UART huart2
+#define UART              huart2
+#define nRF24_SPI         hspi2
+#define SSD1306_I2C_PORT  hi2c1
 
-extern SPI_HandleTypeDef hspi2;
-#define nRF24_SPI hspi2
+
+
+extern UART_HandleTypeDef UART;
+extern SPI_HandleTypeDef nRF24_SPI;
 
 
 static inline void nRF24_CE_L() {

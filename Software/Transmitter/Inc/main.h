@@ -72,10 +72,12 @@ void Error_Handler(void);
 #define LED_B_GPIO_Port GPIOB
 #define BAT_Pin GPIO_PIN_1
 #define BAT_GPIO_Port GPIOB
-#define SW2_Pin GPIO_PIN_10
-#define SW2_GPIO_Port GPIOB
-#define SW1_Pin GPIO_PIN_11
+#define SW1_Pin GPIO_PIN_10
 #define SW1_GPIO_Port GPIOB
+#define SW1_EXTI_IRQn EXTI15_10_IRQn
+#define SW2_Pin GPIO_PIN_11
+#define SW2_GPIO_Port GPIOB
+#define SW2_EXTI_IRQn EXTI15_10_IRQn
 #define NRF_IRQ_Pin GPIO_PIN_12
 #define NRF_IRQ_GPIO_Port GPIOB
 #define NRF_IRQ_EXTI_IRQn EXTI15_10_IRQn
