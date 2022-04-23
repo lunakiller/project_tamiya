@@ -6,8 +6,8 @@
   *                   Working:
   *                     - communication
   *                     - LEDs
-  *                       - green:  communication OK, batt voltage >=6.9V
-  *                       - red:    communication OK, batt voltage <6.9V
+  *                       - green:  communication OK, batt voltage >=6.8V
+  *                       - red:    communication OK, batt voltage <6.8V
   *                       - blue:   no signal
   *                     - communication statistics (messages/sec)
   *                     - UART debug prints controled by Switch1
@@ -388,6 +388,7 @@ int main(void)
       ssd1306_WriteString(ascii_freq, Font_6x8, White);
       ssd1306_WriteString(" Hz", Font_6x8, White);
 
+      // display trimmer values
       if(steer_trim >= 0) {
         snprintf(ascii_trim, 8, "+%i", steer_trim);
       } else {
@@ -420,11 +421,11 @@ int main(void)
         steer_trim -= 1;
       }
       last_enc1 = __HAL_TIM_GET_COUNTER(&htim2);
-      ENC1_IRQ = false;
+      ENC1_IRQ = false;   // reset flag
     }
 
     if(ENC2_IRQ) {        // Throttle trim control
-      if(__HAL_TIM_GET_COUNTER(&htim4) < last_enc2) {
+      if(__HAL_TIM_GET_COUNTER(&htim4) < last_enc2) {   // "<" to maintain same direction
         UART_SendStr("ENC2 - UP\n");
         thrtl_trim += 1;
       } else {
@@ -432,7 +433,7 @@ int main(void)
         thrtl_trim -= 1;
       }
       last_enc2 = __HAL_TIM_GET_COUNTER(&htim4);
-      ENC2_IRQ = false;
+      ENC2_IRQ = false;   // reset flag
     }
 
     /* USER CODE END WHILE */

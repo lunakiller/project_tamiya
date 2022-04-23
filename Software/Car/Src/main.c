@@ -7,8 +7,8 @@
   *                     - communication
   *                     - driving (both servo & bldc control)
   *                     - LEDs
-  *                       - green:  communication OK, batt voltage >=6.9V
-  *                       - red:    communication OK, batt voltage <6.9V
+  *                       - green:  communication OK, batt voltage >=6.8V
+  *                       - red:    communication OK, batt voltage <6.8V
   *                       - blue:   no signal
   *                     - safety timer (250ms no command -> car stops)
   *                     - battery voltage measurements (calibrated)
