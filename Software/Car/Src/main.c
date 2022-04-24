@@ -13,19 +13,19 @@
   *                     - safety timer (250ms no command -> car stops)
   *                     - battery voltage measurements (calibrated)
   *                     - current measurements (needs calibration)
+  *                     - gyro/accel measurements
   *                     - BLDC temperature measurements
   *                     - UART debug prints controled by Switch1
   *                     - OLED display with basic info (batt voltage and bldc temp)
   * 
   *                   TODO:
   *                     - OLED wakeup button
-  *                     - gyro/accel measurements
   *                     - SD card logging (with auto-splitting files)
   *                       - triggered by Switch2
   *                     - calibrate current sensor (VBAT voltage?)
   *                     
   * @author         : Kristian Slehofer
-  * @date           : 23. 4. 2022
+  * @date           : 24. 4. 2022
   ******************************************************************************
   * @attention
   *
@@ -105,10 +105,15 @@ DMA_HandleTypeDef hdma_usart2_tx;
 
 /* USER CODE BEGIN PV */
 // flags
-bool NRF_IRQ = false, adc_data_bat_rdy = false, UART_debug = false, adc_data_sply_rdy = false;
+bool NRF_IRQ = false, adc_data_bat_rdy = false, adc_data_sply_rdy = false;
 bool display_refresh = false, temp_received = false, temp_conv_ready = false;
+// flags controlled by dip switches
+bool UART_debug = false, log_data = false;
 
 uint16_t STATUS_LED = LED_G_Pin;
+
+// MPU6050 data struct
+MPU6050_t mpu;
 
 // temperature data buffer
 uint8_t temp_receive_buffer[9] = {0};
@@ -214,6 +219,13 @@ int main(void)
     MX_USART3_UART_Init();
     UART_debug = true;
   }
+  // same goes with data logging 
+  if(HAL_GPIO_ReadPin(SW2_GPIO_Port, SW2_Pin) == GPIO_PIN_RESET) {
+    if(!MPU6050_Init())
+      Error_Handler();
+    log_data = true;
+  }
+
 
   // start PWMs
   HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_2);   // servo
@@ -353,8 +365,14 @@ int main(void)
       voltage = voltage * vdda / 4095;    // calculate the actual battery voltage
       voltage *= BAT_DIVIDER;
       current = current * vdda / 4095;    // calculate current
-      current = ((supply5 / 2.0) - current) * 1000 / 66.0;   
+      current = ((supply5 / 2.0) - current) * 1000 / 66.0;
+      
+      if(log_data) {
+        // get MPU data
+        MPU6050_ReadAll(&mpu);
+      }
 
+      // send data to UART
       if(UART_debug) {
         UART_SendStr("BAT: ");
         UART_SendInt(voltage);
@@ -367,9 +385,25 @@ int main(void)
         UART_SendStr("mV; ");
         UART_SendStr("BLDC temp: ");
         UART_SendInt(temp);
-        UART_SendStr(",");
+        UART_SendStr(".");
         UART_SendInt(temp_frac);
-        UART_SendStr(" C\n");
+        UART_SendStr("C");
+        if(log_data) {
+          UART_SendStr("; MPU6050 Acc X,Y,Z: (");
+          UART_SendInt(mpu.Ax*1000);
+          UART_SendStr(", ");
+          UART_SendInt(mpu.Ay*1000);
+          UART_SendStr(", ");
+          UART_SendInt(mpu.Az*1000);
+          UART_SendStr(")mg, Gyro X,Y,Z: (");
+          UART_SendInt(mpu.Gx);
+          UART_SendStr(", ");
+          UART_SendInt(mpu.Gy);
+          UART_SendStr(", ");
+          UART_SendInt(mpu.Gz);
+          UART_SendStr(")deg/s");
+        }
+        UART_SendStr("\n");
       }
 
       adc_data_bat_rdy = adc_data_sply_rdy = false;   // reset flags
@@ -380,7 +414,7 @@ int main(void)
       DS_Read((uint8_t*)&temp_receive_buffer);
     }
 
-    if(temp_received) {        // temperature received    
+    if(temp_received) {        // temperature received   
       uint16_t temp_raw = (temp_receive_buffer[1] << 8) | temp_receive_buffer[0];
       temp = DS_GetIntTemp(temp_raw);   // convert integer temperature
 

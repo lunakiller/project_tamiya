@@ -5,7 +5,7 @@
   *                   and functions
   *                     
   * @author         : Kristian Slehofer
-  * @date           : 19. 4. 2022
+  * @date           : 24. 4. 2022
   ******************************************************************************
   */
 
@@ -15,22 +15,25 @@
 #include "main.h"
 #include "tamiya_car.h"     // logo
 #include "ds18b20.h"        // temperature
+#include "mpu6050.h"        // accelerometer and gyroscope
 
 #define GREETING "\n\n-- ProjectTamiya - Car --\n"
 
 #define nRF24_RX
 #define nRF24_TIMEOUT     250
 #define UART_TIMEOUT      250
+#define MPU6050_TIMEOUT   250
 
 #define UART              huart3
 #define nRF24_SPI         hspi1
 #define SSD1306_I2C_PORT  hi2c2
 #define SSD1306_HEIGHT    32
-
+#define MPU6050_I2C_PORT  hi2c1
 
 
 extern UART_HandleTypeDef UART;
 extern SPI_HandleTypeDef nRF24_SPI;
+extern I2C_HandleTypeDef MPU6050_I2C_PORT;
 
 
 static inline void nRF24_CE_L() {

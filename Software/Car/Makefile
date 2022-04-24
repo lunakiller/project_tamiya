@@ -71,7 +71,8 @@ Middlewares/Third_Party/FatFs/src/option/syscall.c \
 ../shared_libs/Src/project_tamiya.c \
 ../shared_libs/Src/ssd1306.c \
 ../shared_libs/Src/ssd1306_fonts.c \
-Src/ds18b20.c
+Src/ds18b20.c \
+Src/mpu6050.c
 
 # ASM sources
 ASM_SOURCES =  \
