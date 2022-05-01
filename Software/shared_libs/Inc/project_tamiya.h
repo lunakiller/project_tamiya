@@ -5,7 +5,7 @@
   *                   platforms (car and transmitter)
   *                     
   * @author         : Kristian Slehofer
-  * @date           : 22. 4. 2022
+  * @date           : 1. 5. 2022
   ******************************************************************************
   */
 
@@ -26,7 +26,7 @@
 #define PT_nRF24_ADDR_WIDTH   3
 #define PT_nRF24_ADDR         0xAB, 0x01, 0x55
 #define PT_nRF24_TXPWR        nRF24_TXPWR_0dBm   // maximum power
-#define PT_nRF24_ACK_SIZE     4
+#define PT_nRF24_ACK_SIZE     3
 #define PT_nRF24_PACKET_SIZE  4
 
 // maximum range constrained by mechanical limits

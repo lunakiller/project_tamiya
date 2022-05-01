@@ -4,7 +4,7 @@
   * @brief          : Common functions implementations
   *                     
   * @author         : Kristian Slehofer
-  * @date           : 22. 4. 2022
+  * @date           : 24. 4. 2022
   ******************************************************************************
   */
 
@@ -20,7 +20,7 @@ uint8_t check_wifi(void) {
   volatile uint8_t nrf_active = 0;
   uint8_t i = 0;
 
-  UART_SendStr("nRF24L01+ check\n");
+  UART_SendStr("nRF24L01+ check...\n");
 
   do {
     nrf_active = nRF24_Check();
