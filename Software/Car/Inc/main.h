@@ -121,7 +121,7 @@ void Error_Handler(void);
 #define PWM_BLDC_Pin GPIO_PIN_9
 #define PWM_BLDC_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
-
+#define SD_SPI_HANDLE hspi2
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

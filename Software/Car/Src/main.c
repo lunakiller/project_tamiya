@@ -10,22 +10,22 @@
   *                       - green:  communication OK, batt voltage >=6.8V
   *                       - red:    communication OK, batt voltage <6.8V
   *                       - blue:   no signal
+  *                       - white:  error (Error_Handler())
   *                     - safety timer (250ms no command -> car stops)
   *                     - battery voltage measurements (calibrated)
   *                     - current measurements (needs calibration)
   *                     - gyro/accel measurements
   *                     - BLDC temperature measurements
-  *                     - UART debug prints controled by Switch1
+  *                     - UART debug prints controlled by Switch1
+  *                     - SD card logging controlled by Switch2
   *                     - OLED display with basic info (batt voltage and bldc temp)
   * 
   *                   TODO:
   *                     - OLED wakeup button
-  *                     - SD card logging (with auto-splitting files)
-  *                       - triggered by Switch2
   *                     - calibrate current sensor (VBAT voltage?)
   *                     
   * @author         : Kristian Slehofer
-  * @date           : 24. 4. 2022
+  * @date           : 1. 5. 2022
   ******************************************************************************
   * @attention
   *
@@ -50,7 +50,8 @@
 #include <string.h>
 #include <math.h>
 
-#include <stdio.h>    // temporary
+#include <stdarg.h>
+#include <stdio.h>
 
 #include "project_tamiya.h"
 /* USER CODE END Includes */
@@ -64,15 +65,18 @@
 /* USER CODE BEGIN PD */
 #define ADC_BUFF_SIZE     512
 
-#define RES_22K           22050.0         // real resistor values
+#define RES_22K           22050.0                                               // real resistor values
 #define RES_10K           9710.0 
-#define BAT_DIVIDER       (RES_22K + RES_10K) / RES_10K // constant to compute battery voltage
+#define BAT_DIVIDER       (RES_22K + RES_10K) / RES_10K                         // constant to compute battery voltage
 
 #define RES_47K_5V        46710.0
 #define RES_47K_GND       46600.0
-#define SPLY_DIVIDER      (RES_47K_5V + RES_47K_GND) / RES_47K_GND // constant to compute supply voltage
+#define SPLY_DIVIDER      (RES_47K_5V + RES_47K_GND) / RES_47K_GND              // constant to compute supply voltage
 
-#define VREFINT_CAL_ADDR  0x1FFFF7BA      // internal reference voltage calibration values address
+#define VREFINT_CAL_ADDR  0x1FFFF7BA                                            // internal reference voltage calibration values address
+
+#define SD_FORMAT         "TIME,VOLTAGE,CURRENT,BLDC_TEMP,STEER,THRTL,ACC_X,ACC_Y,ACC_Z,GYRO_X,GYRO_Y,GYRO_Z,MPU_TEMP\n"
+#define SD_FORMAT_UNITS   "ms,mV,mA,deg C,-,-,mg,mg,mg,deg/s,deg/s,deg/s, deg C\n"
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -104,25 +108,21 @@ DMA_HandleTypeDef hdma_usart2_rx;
 DMA_HandleTypeDef hdma_usart2_tx;
 
 /* USER CODE BEGIN PV */
-// flags
-bool NRF_IRQ = false, adc_data_bat_rdy = false, adc_data_sply_rdy = false;
+bool NRF_IRQ = false, adc_data_bat_rdy = false, adc_data_sply_rdy = false;      // flags
 bool display_refresh = false, temp_received = false, temp_conv_ready = false;
-// flags controlled by dip switches
-bool UART_debug = false, log_data = false;
+
+bool UART_debug = true, log_data = false, unmount_sd = false;                   // flags controlled by dip switches
 
 uint16_t STATUS_LED = LED_G_Pin;
 
-// MPU6050 data struct
-MPU6050_t mpu;
+MPU6050_t mpu;                                                                  // MPU6050 data struct
 
-// temperature data buffer
-uint8_t temp_receive_buffer[9] = {0};
+uint8_t temp_receive_buffer[9] = {0};                                           // temperature data buffer
 
-// ADC data buffer
-uint16_t adc_data_bat[ADC_BUFF_SIZE*2], adc_data_sply[ADC_BUFF_SIZE*2];
-// values
-uint32_t voltage = 7500, current, vrefint, supply5, temp, temp_frac;
-uint16_t tx_freq = 0, tx_freq_cnt = 0;    // command frequency per sec
+uint16_t adc_data_bat[ADC_BUFF_SIZE*2], adc_data_sply[ADC_BUFF_SIZE*2];         // ADC data buffer
+
+uint32_t voltage = 7500, current, vrefint, supply5, temp, temp_frac;            // values
+uint16_t tx_freq = 0, tx_freq_cnt = 0;                                          // command frequency per sec
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -155,6 +155,7 @@ void OW_Error(void);
 void DS_Convert(void);
 void DS_Read(uint8_t* buffer);
 uint16_t DS_GetIntTemp(uint16_t temp);
+void PrintError(const char *s, ...);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -198,6 +199,7 @@ int main(void)
   MX_SPI2_Init();
   MX_I2C2_Init();
   MX_TIM8_Init();
+  MX_USART3_UART_Init();
   MX_FATFS_Init();
   MX_TIM1_Init();
   MX_TIM17_Init();
@@ -206,83 +208,190 @@ int main(void)
   MX_ADC2_Init();
   /* USER CODE BEGIN 2 */
 
-  // turn on LED
-  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);                  // turn on LED
 
-  // init display
-  ssd1306_Init();
+  ssd1306_Init();                                                               // init display
   ssd1306_DrawXBitmap(0, 0, tamiya_car_bits, tamiya_car_width, tamiya_car_height, White);
   ssd1306_UpdateScreen();
 
-  // initialize UART debug only if switch is pulled low
-  if(HAL_GPIO_ReadPin(SW1_GPIO_Port, SW1_Pin) == GPIO_PIN_RESET) {
-    MX_USART3_UART_Init();
-    UART_debug = true;
-  }
-  // same goes with data logging 
-  if(HAL_GPIO_ReadPin(SW2_GPIO_Port, SW2_Pin) == GPIO_PIN_RESET) {
-    if(!MPU6050_Init())
+  HAL_UART_Transmit(&UART, (uint8_t*)GREETING, strlength(GREETING), UART_TIMEOUT);  // send greeting
+
+  if(HAL_GPIO_ReadPin(SW2_GPIO_Port, SW2_Pin) == GPIO_PIN_RESET) {              // enable SD logging only if switch is ON
+    UART_SendStr("Logging enabled.\n");
+    if(!MPU6050_Init()) {
+      PrintError("MPU init error!");
       Error_Handler();
+    }
     log_data = true;
+    UART_SendStr("MPU6050 initialized!\n");
   }
 
+                                                                                // start PWMs
+  HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_2);                                     // servo
+  HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_3);                                     // bldc
+  // __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_2, PT_RC_NEUTRAL);               // reset servo
+  // __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_3, PT_RC_NEUTRAL);               // reset bldc
+  UART_SendStr("PWMs started!\n");
 
-  // start PWMs
-  HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_2);   // servo
-  HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_3);   // bldc
-  // __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_2, PT_RC_NEUTRAL);   // reset servo
-  // __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_3, PT_RC_NEUTRAL);   // reset bldc
-
-  // init temperature sensor
-  OneWire_Init();
+  OneWire_Init();                                                               // init 1-Wire bus and temperature sensor
   OneWire_SetCallback(OW_Complete, OW_Error);
-  // request first temperature conversion (~900ms)
-  DS_Convert();
+  DS_Convert();                                                                 // request first temperature conversion (~750ms)
+  
+  BlinkLeds();                                                                  // blink RGB led
 
-  // blink RGB led
-  BlinkLeds();
-
-  // send greeting
-  HAL_UART_Transmit(&UART, (uint8_t*)GREETING, strlength(GREETING), UART_TIMEOUT);
-
-  // ADC calibration
-  if(HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED) !=  HAL_OK) {
+  if(HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED) !=  HAL_OK) {        // ADC calibration
+    PrintError("ADC1 calib failed!");
     Error_Handler();
   }
   if(HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED) !=  HAL_OK) {
+    PrintError("ADC2 calib failed!");
+    Error_Handler();
+  }
+  UART_SendStr("Both ADCs succesfully calibrated!\n");
+
+  uint16_t vrefint_cal = *((uint16_t*)VREFINT_CAL_ADDR);                        // get internal ref voltage calibration value
+
+  if(!nRF24_InitModule()) {                                                     // init communication module
+    PrintError("nRF24 init error!");
     Error_Handler();
   }
 
-  // get internal ref voltage calibration value
-  uint16_t vrefint_cal = *((uint16_t*)VREFINT_CAL_ADDR);
+  FATFS FatFs;                                                                  // variables for FatFS
+  FIL file;
+  volatile FRESULT fres;
+  static char log_buffer[128];
 
-  // init communication module
-  if(!nRF24_InitModule())
-    Error_Handler();
+  if(log_data) {                                                                // prepare SD card
+    UART_SendStr("Preparing SD card...\n");
 
-  // start timers
-  HAL_TIM_Base_Start_IT(&htim1);    // 50hz data
-  HAL_TIM_Base_Start_IT(&htim17);   // safety timer (4Hz)
-  HAL_TIM_Base_Start_IT(&htim16);   // OLED display refresh (4Hz)
-  HAL_TIM_Base_Start_IT(&htim6);    // per-sec statistics
+    fres = f_mount(&FatFs, "", 1);                                              // 1 = mount now
+    if(fres != FR_OK) {
+      PrintError("f_mount error (%i)!", fres);
+      Error_Handler();
+    }
+
+    DWORD free_clusters, free_sectors, total_sectors;                           // SD card statistics
+    FATFS* getFreeFs;
+
+    fres = f_getfree("", &free_clusters, &getFreeFs);
+    if(fres != FR_OK) {
+      PrintError("f_getfree error (%i)!", fres);
+      Error_Handler();
+    }
+
+    total_sectors = (getFreeFs->n_fatent - 2) * getFreeFs->csize;               // formula comes from ChaN's FatFS documentation
+    free_sectors = free_clusters * getFreeFs->csize;
+
+    UART_SendStr("SD card stats:\n  ");
+    UART_SendInt(total_sectors / 2);
+    UART_SendStr(" KiB total drive space, ");
+    UART_SendInt(free_sectors / 2);
+    UART_SendStr(" KiB available.\n");
+
+    
+    DIR dir;                                                                    // get number of files on SD
+    FILINFO fno;
+    uint16_t num_files = 0;
+
+    UART_SendStr("Opening /logs folder...\n");
+    fres = f_opendir(&dir, "/logs");                                            // open logs folder
+    if(fres == FR_NO_PATH) {
+      fres = f_mkdir("logs");                                                   // create it if it does not exist
+      if (fres != FR_OK) {
+        PrintError("f_mkdir error (%i)!", fres);
+        Error_Handler();
+      }
+    }
+    
+    do {                                                                        // iterate over files in folder
+        f_readdir(&dir, &fno);
+        if(fno.fname[0] != 0) {
+          UART_SendStr("File found: ");
+          UART_SendStr(fno.fname);
+          UART_SendStr("\n");
+
+          num_files++;                                                          // increment counter
+        }
+    } while(fno.fname[0] != 0);
+    f_closedir(&dir);
+
+    UART_SendStr("Number of files in /logs folder: ");
+    UART_SendInt(num_files);
+    UART_SendStr("\n");
+
+    static char log_fname[64];                                                  // static inits to zeros
+    sprintf(log_fname, "/logs/log_%03i.csv", num_files);
+
+    fres = f_open(&file, log_fname, FA_CREATE_ALWAYS | FA_WRITE);               // try to open file
+    if(fres != FR_OK) {
+      PrintError("f_open error (%i)!", fres);
+      Error_Handler();
+    }
+
+    fres = f_lseek(&file, 6144000);                                             // pre-allocate 6MiB of space, shoul be enough for ~40 min of logs
+    if(fres != FR_OK || f_tell(&file) != 6144000) {
+      PrintError("f_lseek error (%i)!", fres);
+      Error_Handler();
+    }
+
+    fres = f_lseek(&file, 0);                                                   // return back to the beginning
+    if(fres != FR_OK || f_tell(&file) != 0) {
+      PrintError("f_lseek error (%i)!", fres);
+      Error_Handler();
+    }
+    UART_SendStr("Pre-allocation done.\n");
+
+    strncpy(log_buffer, SD_FORMAT, strlen(SD_FORMAT)+1);                        // start file with description of units
+    UINT bytesWrote;
+    fres = f_write(&file, log_buffer, strlen(log_buffer), &bytesWrote);
+
+    strncpy(log_buffer, SD_FORMAT_UNITS, strlen(SD_FORMAT_UNITS)+1);
+    fres = f_write(&file, log_buffer, strlen(log_buffer), &bytesWrote);
+    if(fres == FR_OK) {
+      UART_SendStr("Write to ");
+      UART_SendStr(log_fname);
+      UART_SendStr(" succesful.\n");
+    } else {
+      PrintError("f_write error (%i)!", fres);
+      Error_Handler();
+    }
+    f_sync(&file);                                                              // sync file
+
+    UART_SendStr("SD card ready!\n");
+  }
+
+                                                                                // start timers
+  HAL_TIM_Base_Start_IT(&htim1);                                                // 50hz data
+  HAL_TIM_Base_Start_IT(&htim17);                                               // safety timer (4Hz)
+  HAL_TIM_Base_Start_IT(&htim16);                                               // OLED display refresh (4Hz)
+  HAL_TIM_Base_Start_IT(&htim6);                                                // per-sec statistics
+  UART_SendStr("Timers started.\n");
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  uint8_t status, size;
-  // nRF24 buffer, ack placeholder
-  uint8_t buffer[PT_nRF24_PACKET_SIZE], ack[PT_nRF24_ACK_SIZE];
+  uint8_t status, size;                                                         // nRF24 variables
   
-  // control values
-  int16_t throttle = 0, steer = 0;
+  uint8_t buffer[PT_nRF24_PACKET_SIZE], ack[PT_nRF24_ACK_SIZE];                 // nRF24 msg and ack bufferš
+  
+  int16_t throttle = 0, steer = 0;                                              // control values
 
-  // turn off the led as the initialization is done
-  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+  UART_SendStr("Entering main control loop...\n");
 
-  // enable cycle counter
-  // CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  if(HAL_GPIO_ReadPin(SW1_GPIO_Port, SW1_Pin) == GPIO_PIN_SET) {                // deinitialize UART debug if switch is OFF
+    UART_SendStr("Deinitializing UART...\n");
+    HAL_UART_DeInit(&UART);
+    UART_debug = false;
+  }
+
+  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);                    // turn off the led as the initialization is done
+
+  uint32_t starttime = HAL_GetTick();
+  uint32_t bytes_total = 0;
+
+  // CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;                            // enable cycle counter for debug purposes
   // DWT->CYCCNT = 0;
   // DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
@@ -292,22 +401,21 @@ int main(void)
 
   while (1)
   {
-    if(NRF_IRQ) {     // nRF external interrupt
-      NRF_IRQ = false;    // reset flag
+    if(NRF_IRQ) {                                                               // nRF external interrupt
       status = nRF24_GetStatus();
-      if(status & nRF24_FLAG_RX_DR) {    // data in RX data register
-        memmove(&ack[0], &voltage, sizeof(uint16_t));   // prepare ACK packet
-        memmove(&ack[2], &temp, sizeof(uint8_t));
-        memmove(&ack[3], &temp_frac, sizeof(uint8_t));
+
+      if(status & nRF24_FLAG_RX_DR) {                                           // data in RX data register
+        uint8_t temp_byte = (temp & 0x7F) | (temp_frac ? (1 << 7) : (0 << 7));  // prepare ACK packet
+        memmove(&ack[0], &voltage, sizeof(uint16_t));
+        memmove(&ack[2], &temp_byte, sizeof(uint8_t));
         
         nRF24_ReceivePacket(buffer, &size, ack);
 
         if(size == PT_nRF24_PACKET_SIZE) {
-          memmove(&throttle, &buffer, sizeof(int16_t));   // parse control data
+          memmove(&throttle, &buffer, sizeof(int16_t));                         // parse control data
           memmove(&steer, &buffer[2], sizeof(int16_t));
 
-          // check and clip values
-          if(steer > PT_MAXSTEER) {
+          if(steer > PT_MAXSTEER) {                                             // check and clip values
             steer = PT_MAXSTEER;
           }
           else if(steer < -PT_MAXSTEER) {
@@ -320,30 +428,56 @@ int main(void)
             throttle = -PT_MAXTHRTL;
           }
           
-          // update PWM settings
-          __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_2, PT_RC_NEUTRAL - steer);
+          __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_2, PT_RC_NEUTRAL - steer);  // update PWM settings
           __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_3, PT_RC_NEUTRAL - throttle);
 
-          __HAL_TIM_SET_COUNTER(&htim17, 0);    // reset safety timer
+          __HAL_TIM_SET_COUNTER(&htim17, 0);                                    // reset safety timer
 
           tx_freq_cnt++;
         }
+      }
 
-      // UART_SendStr("\n----------------------\nPayload:\n");
-      // UART_SendBufHex((char *) buffer, size);
-      // UART_SendStr(" - ");
-      // UART_SendStr(buffer);
-      // UART_SendStr("\npayload length:\n");
-      // UART_SendInt(size);
-      // UART_SendStr("\n\n");
+      NRF_IRQ = false;                                                          // reset flag
+    }
 
-      // HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
+
+    if(temp_conv_ready) {                                                       // temperature conversion in sensor ready
+      memset(temp_receive_buffer, 0, sizeof(temp_receive_buffer));
+      DS_Read((uint8_t*)&temp_receive_buffer);
+
+      if(log_data) {                                                            // also sync the file if logging is enabled
+        f_sync(&file);
+
+        if(UART_debug) {
+          UART_SendStr("FILE SYNCED! ");
+          UART_SendInt(bytes_total);
+          UART_SendStr(" bytes total\n");
+        }
+
+        bytes_total = 0;                                                        // reset counter
       }
     }
 
-    if(adc_data_bat_rdy && adc_data_sply_rdy) {    // ADC conversion complete interrupt
-      voltage = current = vrefint = supply5 = 0;   // reset
-      for(int i = 0; i < 2*ADC_BUFF_SIZE; i += 2) {   // average values
+
+    if(temp_received) {                                                         // temperature received   
+      uint16_t temp_raw = (temp_receive_buffer[1] << 8) | temp_receive_buffer[0];
+      temp = DS_GetIntTemp(temp_raw);                                           // convert integer temperature
+
+      if((temp_raw & (0x8)) == 0x8) {                                           // check bit associated with 2^(-1) deg C
+        temp_frac = 5;
+      } else {
+        temp_frac = 0;
+      }
+      
+      temp_received = false;                                                    // reset flag
+      DS_Convert();                                                             // start next conversion
+    }
+
+
+    if(adc_data_bat_rdy && adc_data_sply_rdy) {                                 // ADC conversion complete interrupt (20Hz)
+      voltage = current = vrefint = supply5 = 0;                                // reset
+
+      for(int i = 0; i < 2*ADC_BUFF_SIZE; i += 2) {                             // average values
         voltage += (uint16_t)adc_data_bat[i + 0];
         current += (uint16_t)adc_data_bat[i + 1];
         vrefint += (uint16_t)adc_data_sply[i + 0];
@@ -354,26 +488,38 @@ int main(void)
       vrefint /= ADC_BUFF_SIZE;
       supply5 /= ADC_BUFF_SIZE;
 
-      //calculate VDDA
-      uint16_t vdda = 3300 * vrefint_cal / vrefint;
-
-      // calculate voltage on pin from 12bit binary
-      // 24mV is a magic constant, it is an offset between BOOT1 and actual MCU pin
-      supply5 = supply5 * vdda / 4095 + 24;    // calculate supply voltage (5V) 
-      // uint16_t supply5_raw = supply5;     // 2517 boot1, 2493 mcu pin
+      uint16_t vdda = 3300 * vrefint_cal / vrefint;                             //calculate VDDA
+      
+      supply5 = supply5 * vdda / 4095 + 24;                                     // calculate supply voltage (5V)
+                                                                                // 24mV is a "magic constant", it is an offset between BOOT1 and actual MCU pin
       supply5 *= SPLY_DIVIDER;
-      voltage = voltage * vdda / 4095;    // calculate the actual battery voltage
+      voltage = voltage * vdda / 4095;                                          // calculate the actual battery voltage
       voltage *= BAT_DIVIDER;
-      current = current * vdda / 4095;    // calculate current
-      current = ((supply5 / 2.0) - current) * 1000 / 66.0;
+      current = current * vdda / 4095;                                          // calculate current
+      current = ((supply5 / 2.0) - current) * 1000 / 66.0;                      // 66 mV/A from datasheet
       
       if(log_data) {
-        // get MPU data
-        MPU6050_ReadAll(&mpu);
+        MPU6050_ReadAll(&mpu);                                                  // get MPU data
+
+        memset(log_buffer, 0, sizeof(log_buffer));                              // prepare log entry
+        int num = snprintf(log_buffer, 128, "%u,%u,%u,%u.%u,%i,%i,%i,%i,%i,%i,%i,%i,%i\n",\
+          HAL_GetTick() - starttime, voltage, current, temp, temp_frac, steer, throttle, (int)(mpu.Ax*1000),\
+          (int)(mpu.Ay*1000), (int)(mpu.Az*1000), (int)mpu.Gx, (int)mpu.Gy, (int)mpu.Gz, (int)mpu.temp);
+
+        UINT bytesWrote;
+        fres = f_write(&file, log_buffer, num, &bytesWrote);                    // write log entry to the file
+        bytes_total += bytesWrote;
+
+        if(fres != FR_OK) {
+          PrintError("f_write error (%i)\r\n");
+          unmount_sd = true;                                                    // try to unmount
+          if(UART_debug) {
+            HAL_Delay(1000);                                                    // delay to notice the error
+          }
+        }
       }
 
-      // send data to UART
-      if(UART_debug) {
+      if(UART_debug) {                                                          // send data to UART
         UART_SendStr("BAT: ");
         UART_SendInt(voltage);
         UART_SendStr("mV, ");
@@ -387,61 +533,38 @@ int main(void)
         UART_SendInt(temp);
         UART_SendStr(".");
         UART_SendInt(temp_frac);
-        UART_SendStr("C");
-        if(log_data) {
-          UART_SendStr("; MPU6050 Acc X,Y,Z: (");
-          UART_SendInt(mpu.Ax*1000);
-          UART_SendStr(", ");
-          UART_SendInt(mpu.Ay*1000);
-          UART_SendStr(", ");
-          UART_SendInt(mpu.Az*1000);
-          UART_SendStr(")mg, Gyro X,Y,Z: (");
-          UART_SendInt(mpu.Gx);
-          UART_SendStr(", ");
-          UART_SendInt(mpu.Gy);
-          UART_SendStr(", ");
-          UART_SendInt(mpu.Gz);
-          UART_SendStr(")deg/s");
-        }
-        UART_SendStr("\n");
+        UART_SendStr("C\n");
       }
 
-      adc_data_bat_rdy = adc_data_sply_rdy = false;   // reset flags
+      adc_data_bat_rdy = adc_data_sply_rdy = false;                             // reset flags
     }
 
-    if(temp_conv_ready) {      // temperature conversion ready
-      memset(temp_receive_buffer, 0, sizeof(temp_receive_buffer));
-      DS_Read((uint8_t*)&temp_receive_buffer);
+
+    if(log_data && unmount_sd) {
+      f_truncate(&file);                                                        // truncate unused area
+      f_close(&file);                                                           // close file
+      UART_SendStr("File saved.\n");
+
+      f_mount(NULL, "", 0);                                                     // unmount SD card
+      UART_SendStr("SD unmounted succesfully!\n");
+
+      log_data = unmount_sd = false;                                            // reset flags
     }
 
-    if(temp_received) {        // temperature received   
-      uint16_t temp_raw = (temp_receive_buffer[1] << 8) | temp_receive_buffer[0];
-      temp = DS_GetIntTemp(temp_raw);   // convert integer temperature
 
-      if((temp_raw & (0x8)) == 0x8) {   // check bit associated with 2^(-1)
-        temp_frac = 5;
-      } else {
-        temp_frac = 0;
-      }
-      
-      temp_received = false;    // reset flag
-
-      DS_Convert();   // start next conversion
-    }
-
-    if(display_refresh) {   // OLED display refresh interrupt
-      ssd1306_Fill(Black);
+    if(display_refresh) {                                                       // OLED display refresh interrupt
+      ssd1306_Fill(Black);                                                      // clear
       OLED_TempInfo(10, 0, temp, temp_frac, White, Font_7x10);
       OLED_BatInfo(90, 0, voltage, White, Font_7x10);
       ssd1306_SetCursor(5, 20);
       ssd1306_WriteString("freq ", Font_7x10, White);
       char ascii_freq[6];
       snprintf(ascii_freq, 6, "%d", tx_freq);
-      ssd1306_WriteString(ascii_freq, Font_7x10, White);
+      ssd1306_WriteString(ascii_freq, Font_7x10, White);                        
       ssd1306_WriteString(" msgs/sec", Font_7x10, White);
       ssd1306_UpdateScreen();
 
-      display_refresh = false;    // reset flag
+      display_refresh = false;                                                  // reset flag
     }    
 
     /* USER CODE END WHILE */
@@ -1208,26 +1331,39 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(NRF_IRQ_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : NRF_CE_Pin NRF_CSN_Pin SD_CS_Pin LED_B_Pin
-                           LED_G_Pin LED_R_Pin */
-  GPIO_InitStruct.Pin = NRF_CE_Pin|NRF_CSN_Pin|SD_CS_Pin|LED_B_Pin
-                          |LED_G_Pin|LED_R_Pin;
+  /*Configure GPIO pins : NRF_CE_Pin NRF_CSN_Pin LED_B_Pin LED_G_Pin
+                           LED_R_Pin */
+  GPIO_InitStruct.Pin = NRF_CE_Pin|NRF_CSN_Pin|LED_B_Pin|LED_G_Pin
+                          |LED_R_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : SW1_Pin SW2_Pin */
-  GPIO_InitStruct.Pin = SW1_Pin|SW2_Pin;
+  /*Configure GPIO pin : SD_CS_Pin */
+  GPIO_InitStruct.Pin = SD_CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(SD_CS_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : SW1_Pin */
+  GPIO_InitStruct.Pin = SW1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_Init(SW1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PA11 PA12 */
   GPIO_InitStruct.Pin = GPIO_PIN_11|GPIO_PIN_12;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : SW2_Pin */
+  GPIO_InitStruct.Pin = SW2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(SW2_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI4_IRQn, 7, 0);
@@ -1245,80 +1381,72 @@ static void MX_GPIO_Init(void)
 
 /* CALLBACKS */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-  if(GPIO_Pin == NRF_IRQ_Pin) {   // nRF24 interrupt
+  if(GPIO_Pin == NRF_IRQ_Pin) {                                                 // nRF24 interrupt
     NRF_IRQ = true;
 
-    // reset no signal led
-    HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET);              // reset no signal led
     HAL_GPIO_TogglePin(GPIOB, STATUS_LED);
-    // UART_SendStr("NRF_IRQ\n");
   }
-  else if(GPIO_Pin == OLED_WKUP_Pin) {    // oled wakeup button
+  else if(GPIO_Pin == OLED_WKUP_Pin) {                                          // OLED wakeup button
     UART_SendStr("OLED_WKUP\n");
   }
-  else if(GPIO_Pin == SW1_Pin) {    // switch 1
+  else if(GPIO_Pin == SW1_Pin) {                                                // switch 1 (UART)
     UART_SendStr("SW1\n");
+
     if(HAL_GPIO_ReadPin(SW1_GPIO_Port, SW1_Pin) == GPIO_PIN_RESET) {
       MX_USART3_UART_Init();
       UART_debug = true;
+      UART_SendStr("UART initialized!\n");
     } else {
-      HAL_UART_DeInit(&huart3);
+      UART_SendStr("Deinitializing UART...\n");
+      HAL_UART_DeInit(&UART);
       UART_debug = false;
     }
   }
-  else if(GPIO_Pin == SW2_Pin) {    // switch 2
+  else if(GPIO_Pin == SW2_Pin) {                                                // switch 2 (SD logging)
     UART_SendStr("SW2\n");
+    unmount_sd = true;
   }
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-  if(htim->Instance == TIM1) {    // data timer interrupt
+  if(htim->Instance == TIM1) {                                                  // data timer interrupt
     HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_data_bat, ADC_BUFF_SIZE*2);
     HAL_ADC_Start_DMA(&hadc2, (uint32_t*)adc_data_sply, ADC_BUFF_SIZE*2);
-
-    // SET_BIT(ADC_Common->CCR, ADC_CCR_VBATEN);
-    // UART_SendStr("TIM1 IRQ\n");
   }
-  else if(htim->Instance == TIM17) {    // safety timer interrupt
-    __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_2, 1500);   // neutral
+  else if(htim->Instance == TIM17) {                                            // safety timer interrupt
+    __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_2, 1500);                         // neutral
     __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_3, 1500);
 
-    // reset status led
-    HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);              // reset status led
     HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
-    // turn on no signal led
-    HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_SET);
-
+    
+    HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_SET);                // turn on no signal led
     UART_SendStr("NO SIGNAL!\n");
   }
-  else if(htim->Instance == TIM16) {
+  else if(htim->Instance == TIM16) {                                            // display refresh interrupt
     display_refresh = true;
   }
-  else if(htim->Instance == TIM6) {    // 1Hz timer interrupt
-    tx_freq = tx_freq_cnt;    // save value
-    tx_freq_cnt = 0;    // reset counter
+  else if(htim->Instance == TIM6) {                                             // 1Hz timer interrupt
+    tx_freq = tx_freq_cnt;                                                      // save value
+    tx_freq_cnt = 0;                                                            // reset counter
 
-    // change status led color according to voltage level
-    if(voltage < 6800 && STATUS_LED != LED_R_Pin) {
-      // turn off green LED
-      HAL_GPIO_WritePin(GPIOA, LED_G_Pin, GPIO_PIN_RESET);
+    if(voltage < 6800 && STATUS_LED != LED_R_Pin) {                             // change status led color according to voltage level
+      HAL_GPIO_WritePin(GPIOA, LED_G_Pin, GPIO_PIN_RESET);                      // turn off green LED
       STATUS_LED = LED_R_Pin;
     }
     else {
+      HAL_GPIO_WritePin(GPIOA, LED_R_Pin, GPIO_PIN_RESET);                      // turn off red LED
       STATUS_LED = LED_G_Pin;
     }
 
-    // set temp conv flag
-    temp_conv_ready = true;
+    temp_conv_ready = true;                                                     // set temp conv flag
   }
 }
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc) {
   if(hadc->Instance == ADC1) {
     adc_data_bat_rdy = true;
-
-    // CLEAR_BIT(ADC_Common->CCR, ADC12_CCR_VBATEN);
-    // UART_SendStr("ADC conv cplt\n");
   }
   else if(hadc->Instance == ADC2) {
     adc_data_sply_rdy = true;
@@ -1360,15 +1488,16 @@ void OW_Complete(void) {
 }
 
 void OW_Error(void) {
+  PrintError("OneWire error!");
   Error_Handler();
 }
 
-void DS_Convert(void) {   // init temperature measurement
+void DS_Convert(void) {                                                         // init temperature measurement conversion
   OneWire_Execute(0xcc,0,0x44,0);
   HAL_GPIO_WritePin(GPIOC, LED1_Pin, GPIO_PIN_RESET);
 }
 
-void DS_Read(uint8_t* buffer) {   // read converted temperature
+void DS_Read(uint8_t* buffer) {                                                 // read converted temperature
   temp_conv_ready = false;
   OneWire_Execute(0xcc,0,0xbe,buffer);
 }
@@ -1376,7 +1505,7 @@ void DS_Read(uint8_t* buffer) {   // read converted temperature
 #define DS_INT_MASK 0x7F0
 #define DS_SIGN_MASK 0x800
 
-uint16_t DS_GetIntTemp(uint16_t temp) {    // convert raw temp to int
+uint16_t DS_GetIntTemp(uint16_t temp) {                                         // convert raw temp to int
   uint16_t converted_temp = 0;
   temp &= DS_INT_MASK;
   for(int k = 0; k < 8; ++k) {
@@ -1385,6 +1514,24 @@ uint16_t DS_GetIntTemp(uint16_t temp) {    // convert raw temp to int
   if(((temp & DS_SIGN_MASK) >> 11) == 0x01)
     converted_temp *= -1;
   return converted_temp;
+}
+
+void PrintError(const char *s, ...) {                                           // printf functionality
+  static char buffer[256];
+  va_list args;
+  va_start(args, s);
+  vsnprintf(buffer, sizeof(buffer), s, args);
+  va_end(args);
+
+  ssd1306_Fill(Black);
+  ssd1306_SetCursor(5, 12);
+  ssd1306_WriteString(buffer, Font_6x8, White);
+  ssd1306_UpdateScreen();
+
+  if(UART_debug) {
+    UART_SendStr(buffer);
+    UART_SendStr("\n");
+  }
 }
 /* -------------------------------------------------------------------------- */
 
@@ -1398,11 +1545,16 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-  HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET);
 
-  while(1) {
+  HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_SET);                  // white light
+  HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_SET);
+
+  if(log_data) {
+    f_mount(NULL, "", 0);                                                       // try to unmount SD
+  }
+
+  while(1) {                                                                    // periodically blink small led
     HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
     HAL_Delay(500);
   }

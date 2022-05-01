@@ -29,6 +29,7 @@
 #define SSD1306_I2C_PORT  hi2c2
 #define SSD1306_HEIGHT    32
 #define MPU6050_I2C_PORT  hi2c1
+// #define SD_SPI_HANDLE     hspi2    // needs to be defined in main.h
 
 
 extern UART_HandleTypeDef UART;
