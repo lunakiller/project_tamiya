@@ -17,11 +17,11 @@
   *                     - control trimmers (rottary encoders)
   *                     - OLED status display with various info
   *                       - car batt voltage and bldc temperature
-  *                       - tx batt voltage, msgs/sec, trimmer values
+  *                       - tx batt voltage, msgs/sec, trigger and trimmer values
+  *                       - signal loss
   * 
   *                   TODO:
   *                     - polish display UI
-  *                     - detect and visualize signal loss
   *                     
   * @author         : Kristian Slehofer
   * @date           : 1. 5. 2022
@@ -98,7 +98,7 @@ DMA_HandleTypeDef hdma_usart2_tx;
 /* USER CODE BEGIN PV */
 
 bool NRF_IRQ = false, trigger_data_rdy = false, adc_data_bat_rdy = false;       // flags
-bool display_refresh = false, ENC1_IRQ = false, ENC2_IRQ = false;
+bool display_refresh = false, ENC1_IRQ = false, ENC2_IRQ = false, no_signal = false;
 
 bool UART_debug = true;                                                         // flags controlled by dip switches
 
@@ -356,10 +356,15 @@ int main(void)
     if(display_refresh) {                                                       // OLED display refresh interrupt
       ssd1306_Fill(Black);
       ssd1306_DrawXBitmap(0, 3, car_logo_bits, 18, 9, White);
-      OLED_TempInfo(27, 0, car_temp, car_temp_frac, White, Font_6x8);
-      OLED_BatInfo(96, 0, car_voltage, White, Font_6x8);
+      if(no_signal) {                                                           // if no signal detected, print it on display
+        ssd1306_SetCursor(35, 2);
+        ssd1306_WriteString("NO SIGNAL!", Font_7x10, White);
+      } else {                                                                  // else print car status
+        OLED_TempInfo(27, 0, car_temp, car_temp_frac, White, Font_6x8);
+        OLED_BatInfo(96, 0, car_voltage, White, Font_6x8);
+      }
       OLED_BatInfo(96, 50, voltage, White, Font_6x8);
-      // ssd1306_DrawHLine(13, White);
+      ssd1306_DrawHLine(13, White);
 
       char ascii_buffer[8];
 
@@ -1114,6 +1119,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
       
       HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_SET);              // turn on no signal led
       UART_SendStr("NO SIGNAL!\n");
+      no_signal = true;
     } else {
       HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET);
     }
@@ -1190,11 +1196,12 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-  HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET);
 
-  while(1) {
+  HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_SET);                  // white light
+  HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_SET);
+
+  while(1) {                                                                    // periodically blink small led
     HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
     HAL_Delay(500);
   }
