@@ -1,4 +1,4 @@
-#define bat_logo_width 6
-#define bat_logo_height 12
-static unsigned char batoff_logo_bits[] __attribute__((unused)) = {
+#define battoff_logo_width 6
+#define battoff_logo_height 12
+static unsigned char battoff_logo_bits[] __attribute__((unused)) = {
    0x33, 0x00, 0x1e, 0x12, 0x12, 0x12, 0x12, 0x12, 0x1e, 0x12, 0x1e, 0x00 };
