@@ -254,7 +254,7 @@ void OLED_TempInfo(uint8_t x, uint8_t y, uint8_t temp, uint8_t frac, SSD1306_COL
 }
 
 void OLED_SignalInfo(uint8_t x, uint8_t y, uint16_t freq, SSD1306_COLOR color, FontDef font) {
-  if(freq > 400) {    // signal strength visualization
+  if(freq > 200) {    // signal strength visualization
     ssd1306_DrawPixel(x + 13, y + 3, White);
     ssd1306_DrawPixel(x + 13, y + 4, White);
     ssd1306_DrawPixel(x + 13, y + 5, White);
@@ -264,7 +264,7 @@ void OLED_SignalInfo(uint8_t x, uint8_t y, uint16_t freq, SSD1306_COLOR color, F
     ssd1306_DrawPixel(x + 13, y + 9, White);
     ssd1306_DrawPixel(x + 13, y + 10, White);
   }
-  if(freq > 300) {
+  if(freq > 150) {
     ssd1306_DrawPixel(x + 11, y + 5, White);
     ssd1306_DrawPixel(x + 11, y + 6, White);
     ssd1306_DrawPixel(x + 11, y + 7, White);
@@ -272,13 +272,13 @@ void OLED_SignalInfo(uint8_t x, uint8_t y, uint16_t freq, SSD1306_COLOR color, F
     ssd1306_DrawPixel(x + 11, y + 9, White);
     ssd1306_DrawPixel(x + 11, y + 10, White);
   }
-  if(freq > 200) {
+  if(freq > 100) {
     ssd1306_DrawPixel(x + 9, y + 7, White);
     ssd1306_DrawPixel(x + 9, y + 8, White);
     ssd1306_DrawPixel(x + 9, y + 9, White);
     ssd1306_DrawPixel(x + 9, y + 10, White);
   }
-  if(freq > 100) {
+  if(freq > 50) {
     ssd1306_DrawPixel(x + 7, y + 9, White);
     ssd1306_DrawPixel(x + 7, y + 10, White);
   }
