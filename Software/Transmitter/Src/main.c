@@ -19,12 +19,9 @@
   *                       - car batt voltage and bldc temperature
   *                       - tx batt voltage, msgs/sec, trigger and trimmer values
   *                       - signal loss
-  * 
-  *                   TODO:
-  *                     - polish display UI
   *                     
   * @author         : Kristian Slehofer
-  * @date           : 1. 5. 2022
+  * @date           : 2. 5. 2022
   ******************************************************************************
   * @attention
   *
@@ -97,8 +94,9 @@ DMA_HandleTypeDef hdma_usart2_tx;
 
 /* USER CODE BEGIN PV */
 
-bool NRF_IRQ = false, trigger_data_rdy = false, adc_data_bat_rdy = false;       // flags
-bool display_refresh = false, ENC1_IRQ = false, ENC2_IRQ = false, no_signal = false;
+bool no_signal = false, show_batoff = false;                                    // flags
+bool NRF_IRQ = false, ENC1_IRQ = false, ENC1_reset = false, ENC2_IRQ = false, ENC2_reset = false;
+bool display_refresh = false, trigger_data_rdy = false, adc_data_bat_rdy = false;
 
 bool UART_debug = true;                                                         // flags controlled by dip switches
 
@@ -183,7 +181,7 @@ int main(void)
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
 
-  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);                  // turn on LED
+  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);                    // turn on LED
 
   ssd1306_Init();                                                               // init display
   ssd1306_DrawXBitmap(0, 0, tamiya_big_bits, tamiya_big_width, tamiya_big_height, White);
@@ -254,7 +252,7 @@ int main(void)
     UART_debug = false;
   }
 
-  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);                    // turn off the led as the initialization is done
+  HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);                  // turn off the led as the initialization is done
 
   while (1)
   {
@@ -276,6 +274,7 @@ int main(void)
 
       trigger_data_rdy = false;                                                 // reset flag
     }
+
 
     if(adc_data_bat_rdy) {
       voltage = vrefint = 0;                                                    // reset
@@ -302,6 +301,7 @@ int main(void)
       adc_data_bat_rdy = false;                                                 // reset flags
     }
 
+
     if(!sending) {                                                              // Send packet, phase 1 - interrupt driven sending
       sending = true;
       int16_t throttle_data, steer_data;
@@ -313,6 +313,7 @@ int main(void)
 
       nRF24_TransmitPacket(buffer, sizeof(buffer));
     }
+
 
     if(NRF_IRQ) {                                                               // Send packet, phase 2 - interrupt driven sending
       nRF24_TXResult tx_res;
@@ -353,26 +354,23 @@ int main(void)
       sending = NRF_IRQ = false;                                                // reset flags
     }
 
+
     if(display_refresh) {                                                       // OLED display refresh interrupt
       ssd1306_Fill(Black);
-      ssd1306_DrawXBitmap(0, 3, car_logo_bits, 18, 9, White);
+      ssd1306_DrawXBitmap(0, 3, car_logo_bits, car_logo_width, car_logo_height, White);
       if(no_signal) {                                                           // if no signal detected, print it on display
         ssd1306_SetCursor(35, 2);
         ssd1306_WriteString("NO SIGNAL!", Font_7x10, White);
       } else {                                                                  // else print car status
         OLED_TempInfo(27, 0, car_temp, car_temp_frac, White, Font_6x8);
-        OLED_BatInfo(96, 0, car_voltage, White, Font_6x8);
+        OLED_BatInfo(96, 0, car_voltage, White, Font_6x8, show_batoff);
       }
-      OLED_BatInfo(96, 50, voltage, White, Font_6x8);
+      OLED_BatInfo(96, 50, voltage, White, Font_6x8, show_batoff);
       ssd1306_DrawHLine(13, White);
 
+      OLED_SignalInfo(0, 50, tx_freq, White, Font_6x8);                         // display commands per sec
+
       char ascii_buffer[8];
-
-      ssd1306_SetCursor(2, 52);                                                 // display commands per sec
-      snprintf(ascii_buffer, 8, "%d", tx_freq);
-      ssd1306_WriteString(ascii_buffer, Font_6x8, White);
-      ssd1306_WriteString(" Hz", Font_6x8, White);
-
       ssd1306_SetCursor(6, 22);                                                 // display trigger values
       ssd1306_WriteString("STEER: ", Font_7x10, White);
       snprintf(ascii_buffer, 8, "%d", steer);
@@ -404,6 +402,7 @@ int main(void)
       display_refresh = false;                                                  // reset flag
     }
 
+
     if(ENC1_IRQ) {                                                              // Steering trim control
       if(__HAL_TIM_GET_COUNTER(&htim2) > last_enc1) {
         UART_SendStr("ENC1 - UP\n");
@@ -416,6 +415,13 @@ int main(void)
       ENC1_IRQ = false;                                                         // reset flag
     }
 
+
+    if(ENC1_reset) {
+      steer_trim = 0;
+      ENC1_reset = false;
+    }
+
+
     if(ENC2_IRQ) {                                                              // Throttle trim control
       if(__HAL_TIM_GET_COUNTER(&htim4) < last_enc2) {                           // "<" to maintain same direction
         UART_SendStr("ENC2 - UP\n");
@@ -426,6 +432,12 @@ int main(void)
       }
       last_enc2 = __HAL_TIM_GET_COUNTER(&htim4);
       ENC2_IRQ = false;                                                         // reset flag
+    }
+
+
+    if(ENC2_reset) {
+      thrtl_trim = 0;
+      ENC2_reset = false;
     }
 
     /* USER CODE END WHILE */
@@ -1093,12 +1105,20 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   else if(GPIO_Pin == SW2_Pin) {                                                // switch 2 (no functionality)
     UART_SendStr("SW2\n");
   }
+  else if(GPIO_Pin == ENC1_BTN_Pin) {
+    ENC1_reset = true;
+  }
+  else if(GPIO_Pin == ENC2_BTN_Pin) {
+    ENC2_reset = true;
+  }
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   if(htim->Instance == TIM6) {                                                  // 1Hz timer interrupt
     tx_freq = tx_freq_cnt;                                                      // save value
     tx_freq_cnt = 0;                                                            // reset counter
+
+    show_batoff = !show_batoff;                                                 // blink battery-off logo
 
     if(voltage < 6800 && STATUS_LED != LED_R_Pin) {                             // change status led color according to voltage level
       HAL_GPIO_WritePin(GPIOA, LED_G_Pin, GPIO_PIN_RESET);                      // turn off green LED

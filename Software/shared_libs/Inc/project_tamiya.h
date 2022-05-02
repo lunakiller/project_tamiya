@@ -5,7 +5,7 @@
   *                   platforms (car and transmitter)
   *                     
   * @author         : Kristian Slehofer
-  * @date           : 1. 5. 2022
+  * @date           : 2. 5. 2022
   ******************************************************************************
   */
 
@@ -18,6 +18,8 @@
 #include "batt_logo.h"        // OLED battery logo
 #include "battoff_logo.h"     // OLED drained battery logo
 #include "temp_logo.h"        // OLED temperature logo
+#include "signal_logo.h"      // OLED signal logo
+#include "msg_sec.h"
 
 // nRF24 configuration
 #define PT_nRF24_CHANNEL      115    // Channel frequency = (2400 + RF_CHANNEL)
@@ -57,8 +59,9 @@ void nRF24_GetCounters(uint8_t* plos, uint8_t* arc);
 /* -------------------------------------------------------------------------- */
 
 /* OLED helper functions */
-void OLED_BatInfo(uint8_t x, uint8_t y, uint16_t milivolts, SSD1306_COLOR color, FontDef font);
+void OLED_BatInfo(uint8_t x, uint8_t y, uint16_t milivolts, SSD1306_COLOR color, FontDef font, uint8_t show_battoff);
 void OLED_TempInfo(uint8_t x, uint8_t y, uint8_t temp, uint8_t frac, SSD1306_COLOR color, FontDef font);
+void OLED_SignalInfo(uint8_t x, uint8_t y, uint16_t freq, SSD1306_COLOR color, FontDef font);
 /* -------------------------------------------------------------------------- */
 
 /* UART helper functions */

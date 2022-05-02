@@ -4,7 +4,7 @@
   * @brief          : Common functions implementations
   *                     
   * @author         : Kristian Slehofer
-  * @date           : 24. 4. 2022
+  * @date           : 2. 5. 2022
   ******************************************************************************
   */
 
@@ -202,7 +202,7 @@ void nRF24_GetCounters(uint8_t* plos, uint8_t* arc) {
 #endif // nRF24_TX
 
 /* OLED helper functions */
-void OLED_BatInfo(uint8_t x, uint8_t y, uint16_t milivolts, SSD1306_COLOR color, FontDef font) {
+void OLED_BatInfo(uint8_t x, uint8_t y, uint16_t milivolts, SSD1306_COLOR color, FontDef font, uint8_t show_battoff) {
   if(milivolts > 8050) {    // battery visualization
     ssd1306_DrawPixel(x + 2, y + 3, White);
     ssd1306_DrawPixel(x + 3, y + 3, White);
@@ -220,9 +220,12 @@ void OLED_BatInfo(uint8_t x, uint8_t y, uint16_t milivolts, SSD1306_COLOR color,
     ssd1306_DrawPixel(x + 3, y + 9, White);
   }
   if(milivolts < 6800) {
-    ssd1306_DrawXBitmap(x, y, batoff_logo_bits, 6, 12, White);
+    if(show_battoff)                                                            // blink battery-off logo
+      ssd1306_DrawXBitmap(x, y, battoff_logo_bits, battoff_logo_width, battoff_logo_height, White);
+    else
+      ssd1306_DrawXBitmap(x, y, batt_logo_bits, batt_logo_width, batt_logo_height, White);
   } else {
-    ssd1306_DrawXBitmap(x, y, bat_logo_bits, 6, 12, White);
+    ssd1306_DrawXBitmap(x, y, batt_logo_bits, batt_logo_width, batt_logo_height, White);
   }
 
   char ascii_bat[10];   // string buffer
@@ -237,7 +240,7 @@ void OLED_BatInfo(uint8_t x, uint8_t y, uint16_t milivolts, SSD1306_COLOR color,
 void OLED_TempInfo(uint8_t x, uint8_t y, uint8_t temp, uint8_t frac, SSD1306_COLOR color, FontDef font) {
   char ascii_temp[8];
   snprintf(ascii_temp, 8, "%u", temp);
-  ssd1306_DrawXBitmap(x, y, temp_logo_bits, 13, 12, White);
+  ssd1306_DrawXBitmap(x, y, temp_logo_bits, temp_logo_width, temp_logo_height, White);
   ssd1306_SetCursor(x + 15, y + 3);
   ssd1306_WriteString(ascii_temp, font, White);
   if(frac > 0 && frac < 10) {
@@ -250,6 +253,55 @@ void OLED_TempInfo(uint8_t x, uint8_t y, uint8_t temp, uint8_t frac, SSD1306_COL
   ssd1306_WriteCircle(White);
 }
 
+void OLED_SignalInfo(uint8_t x, uint8_t y, uint16_t freq, SSD1306_COLOR color, FontDef font) {
+  if(freq > 400) {    // signal strength visualization
+    ssd1306_DrawPixel(x + 13, y + 3, White);
+    ssd1306_DrawPixel(x + 13, y + 4, White);
+    ssd1306_DrawPixel(x + 13, y + 5, White);
+    ssd1306_DrawPixel(x + 13, y + 6, White);
+    ssd1306_DrawPixel(x + 13, y + 7, White);
+    ssd1306_DrawPixel(x + 13, y + 8, White);
+    ssd1306_DrawPixel(x + 13, y + 9, White);
+    ssd1306_DrawPixel(x + 13, y + 10, White);
+  }
+  if(freq > 300) {
+    ssd1306_DrawPixel(x + 11, y + 5, White);
+    ssd1306_DrawPixel(x + 11, y + 6, White);
+    ssd1306_DrawPixel(x + 11, y + 7, White);
+    ssd1306_DrawPixel(x + 11, y + 8, White);
+    ssd1306_DrawPixel(x + 11, y + 9, White);
+    ssd1306_DrawPixel(x + 11, y + 10, White);
+  }
+  if(freq > 200) {
+    ssd1306_DrawPixel(x + 9, y + 7, White);
+    ssd1306_DrawPixel(x + 9, y + 8, White);
+    ssd1306_DrawPixel(x + 9, y + 9, White);
+    ssd1306_DrawPixel(x + 9, y + 10, White);
+  }
+  if(freq > 100) {
+    ssd1306_DrawPixel(x + 7, y + 9, White);
+    ssd1306_DrawPixel(x + 7, y + 10, White);
+  }
+  if(freq < 10) {
+    ssd1306_DrawPixel(x + 9, y + 6, White);
+    ssd1306_DrawPixel(x + 13, y + 6, White);
+    ssd1306_DrawPixel(x + 10, y + 7, White);
+    ssd1306_DrawPixel(x + 12, y + 7, White);
+    ssd1306_DrawPixel(x + 11, y + 8, White);
+    ssd1306_DrawPixel(x + 10, y + 9, White);
+    ssd1306_DrawPixel(x + 12, y + 9, White);
+    ssd1306_DrawPixel(x + 9, y + 10, White);
+    ssd1306_DrawPixel(x + 13, y + 10, White);
+  }
+
+  ssd1306_DrawXBitmap(x + 1, y + 1, signal_logo_bits, signal_logo_width, signal_logo_height, White);
+  char ascii_signal[8];   // string buffer
+  ssd1306_SetCursor(x + 17, y + 3);
+  snprintf(ascii_signal, 8, "%3d", freq);
+  ssd1306_WriteString(ascii_signal, font, White);
+  // ssd1306_WriteString(" Hz", font, White);
+  ssd1306_DrawXBitmap(x + 36, y + 2, msg_sec_bits, msg_sec_width, msg_sec_height, White);
+}
 
 /* UART helper functions */
 uint8_t strlength(const char *s) {
