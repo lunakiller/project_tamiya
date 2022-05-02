@@ -27,8 +27,8 @@ uint8_t MPU6050_Init(void) {
 
   if (check == 0x68)  // 0x68 will be returned by the sensor if everything goes well
   {
-    // write 0 to wakeup the module
-    Data = 0;
+    // disable sleep mode and set PLL to gyro_x reference
+    Data = 0x01;
     HAL_I2C_Mem_Write(&MPU6050_I2C_PORT, MPU6050_ADDR, PWR_MGMT_1, 1, &Data, 1, MPU6050_TIMEOUT);
 
     // set data rate to 50Hz
