@@ -1083,7 +1083,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     tx_freq = tx_freq_cnt;                                                      // save value
     tx_freq_cnt = 0;                                                            // reset counter
 
-    show_batoff = !show_batoff;                                                 // blink battery-off logo
+    show_batoff = !show_batoff;                                                 // blink battery-off logo (if active)
 
     if(voltage < 6800 && STATUS_LED != LED_R_Pin) {                             // change status led color according to voltage level
       HAL_GPIO_WritePin(GPIOA, LED_G_Pin, GPIO_PIN_RESET);                      // turn off green LED
@@ -1107,6 +1107,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
       no_signal = true;
     } else {
       HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_RESET);
+      no_signal = false;
     }
   }
 }
