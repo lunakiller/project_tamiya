@@ -1,0 +1,4 @@
+#define signal_logo_width 7
+#define signal_logo_height 10
+static unsigned char signal_logo_bits[] __attribute__((unused)) = {
+   0x00, 0x36, 0x36, 0x55, 0x63, 0x77, 0x77, 0x77, 0x77, 0x77 };
