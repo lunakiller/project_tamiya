@@ -18,14 +18,14 @@
   *                     - BLDC temperature measurements
   *                     - UART debug prints controlled by Switch1
   *                     - SD card logging controlled by Switch2
-  *                     - OLED display with basic info (batt voltage and bldc temp)
+  *                     - OLED display with batt voltage, bldc temp and msgs/sec
+  *                       - controlled by button
   * 
   *                   TODO:
-  *                     - OLED wakeup button
   *                     - calibrate current sensor (VBAT voltage?)
   *                     
   * @author         : Kristian Slehofer
-  * @date           : 1. 5. 2022
+  * @date           : 2. 5. 2022
   ******************************************************************************
   * @attention
   *
@@ -99,6 +99,7 @@ SPI_HandleTypeDef hspi2;
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim8;
+TIM_HandleTypeDef htim15;
 TIM_HandleTypeDef htim16;
 TIM_HandleTypeDef htim17;
 
@@ -109,9 +110,11 @@ DMA_HandleTypeDef hdma_usart2_tx;
 
 /* USER CODE BEGIN PV */
 bool NRF_IRQ = false, adc_data_bat_rdy = false, adc_data_sply_rdy = false;      // flags
-bool display_refresh = false, temp_received = false, temp_conv_ready = false;
+bool display_refresh = false, temp_received = false, temp_conv_ready = false, show_batoff = false;
 
 bool UART_debug = true, log_data = false, unmount_sd = false;                   // flags controlled by dip switches
+
+bool display_wakeup = false;                                                    // flag controlled by button
 
 uint16_t STATUS_LED = LED_G_Pin;
 
@@ -142,6 +145,7 @@ static void MX_TIM17_Init(void);
 static void MX_TIM6_Init(void);
 static void MX_TIM16_Init(void);
 static void MX_ADC2_Init(void);
+static void MX_TIM15_Init(void);
 /* USER CODE BEGIN PFP */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
@@ -206,6 +210,7 @@ int main(void)
   MX_TIM6_Init();
   MX_TIM16_Init();
   MX_ADC2_Init();
+  MX_TIM15_Init();
   /* USER CODE BEGIN 2 */
 
   HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);                  // turn on LED
@@ -365,7 +370,12 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim17);                                               // safety timer (4Hz)
   HAL_TIM_Base_Start_IT(&htim16);                                               // OLED display refresh (4Hz)
   HAL_TIM_Base_Start_IT(&htim6);                                                // per-sec statistics
+  HAL_TIM_Base_Start_IT(&htim15);                                               // display ON timer; to trigger the first interrupt
   UART_SendStr("Timers started.\n");
+
+  HAL_TIM_Base_Stop_IT(&htim15);                                                // turn the timer back off and wait for button
+
+  ssd1306_SetDisplayOn(0);                                                      // turn off display
 
   /* USER CODE END 2 */
 
@@ -552,16 +562,11 @@ int main(void)
     }
 
 
-    if(display_refresh) {                                                       // OLED display refresh interrupt
+    if(display_refresh && display_wakeup) {                                     // OLED display refresh interrupt
       ssd1306_Fill(Black);                                                      // clear
       OLED_TempInfo(10, 0, temp, temp_frac, White, Font_7x10);
-      OLED_BatInfo(90, 0, voltage, White, Font_7x10);
-      ssd1306_SetCursor(5, 20);
-      ssd1306_WriteString("freq ", Font_7x10, White);
-      char ascii_freq[6];
-      snprintf(ascii_freq, 6, "%d", tx_freq);
-      ssd1306_WriteString(ascii_freq, Font_7x10, White);                        
-      ssd1306_WriteString(" msgs/sec", Font_7x10, White);
+      OLED_BatInfo(90, 0, voltage, White, Font_7x10, show_batoff);
+      OLED_SignalInfo(45, 19, tx_freq, White, Font_6x8);                        // display commands per sec
       ssd1306_UpdateScreen();
 
       display_refresh = false;                                                  // reset flag
@@ -1125,6 +1130,75 @@ static void MX_TIM8_Init(void)
 }
 
 /**
+  * @brief TIM15 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM15_Init(void)
+{
+
+  /* USER CODE BEGIN TIM15_Init 0 */
+
+  /* USER CODE END TIM15_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
+
+  /* USER CODE BEGIN TIM15_Init 1 */
+
+  /* USER CODE END TIM15_Init 1 */
+  htim15.Instance = TIM15;
+  htim15.Init.Prescaler = 14399;
+  htim15.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim15.Init.Period = 24999;
+  htim15.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim15.Init.RepetitionCounter = 0;
+  htim15.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_OC_Init(&htim15) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_OnePulse_Init(&htim15, TIM_OPMODE_SINGLE) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim15, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_TIMING;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  if (HAL_TIM_OC_ConfigChannel(&htim15, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
+  sBreakDeadTimeConfig.DeadTime = 0;
+  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.BreakFilter = 0;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  if (HAL_TIMEx_ConfigBreakDeadTime(&htim15, &sBreakDeadTimeConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM15_Init 2 */
+
+  /* USER CODE END TIM15_Init 2 */
+
+}
+
+/**
   * @brief TIM16 Initialization Function
   * @param None
   * @retval None
@@ -1389,6 +1463,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
   }
   else if(GPIO_Pin == OLED_WKUP_Pin) {                                          // OLED wakeup button
     UART_SendStr("OLED_WKUP\n");
+
+    HAL_TIM_Base_Stop_IT(&htim15);                                              // reset counter state
+    __HAL_TIM_SET_COUNTER(&htim15, 0);                                          // set counter back to 0 in case the timer was active
+    // TIM15->CR1 |= TIM_CR1_URS;                                               // enable only timer overflow interrupts (doesnt work, IRQ still triggered)
+    HAL_TIM_Base_Start_IT(&htim15);                                             // start timer
+
+    display_wakeup = true;
+    ssd1306_SetDisplayOn(1);                                                    // turn display on
   }
   else if(GPIO_Pin == SW1_Pin) {                                                // switch 1 (UART)
     UART_SendStr("SW1\n");
@@ -1414,22 +1496,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_data_bat, ADC_BUFF_SIZE*2);
     HAL_ADC_Start_DMA(&hadc2, (uint32_t*)adc_data_sply, ADC_BUFF_SIZE*2);
   }
-  else if(htim->Instance == TIM17) {                                            // safety timer interrupt
-    __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_2, 1500);                         // neutral
-    __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_3, 1500);
-
-    HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);              // reset status led
-    HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
-    
-    HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_SET);                // turn on no signal led
-    UART_SendStr("NO SIGNAL!\n");
-  }
-  else if(htim->Instance == TIM16) {                                            // display refresh interrupt
-    display_refresh = true;
-  }
   else if(htim->Instance == TIM6) {                                             // 1Hz timer interrupt
     tx_freq = tx_freq_cnt;                                                      // save value
     tx_freq_cnt = 0;                                                            // reset counter
+
+    show_batoff = !show_batoff;                                                 // blink battery-off logo (if active)
 
     if(voltage < 6800 && STATUS_LED != LED_R_Pin) {                             // change status led color according to voltage level
       HAL_GPIO_WritePin(GPIOA, LED_G_Pin, GPIO_PIN_RESET);                      // turn off green LED
@@ -1441,6 +1512,23 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     }
 
     temp_conv_ready = true;                                                     // set temp conv flag
+  }
+  else if(htim->Instance == TIM15) {                                            // displa ON timer
+    ssd1306_SetDisplayOn(0);                                                    // set display off
+    display_wakeup = false;
+  } 
+  else if(htim->Instance == TIM16) {                                            // display refresh interrupt
+    display_refresh = true;
+  }
+  else if(htim->Instance == TIM17) {                                            // safety timer interrupt
+    __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_2, 1500);                         // neutral
+    __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_3, 1500);
+
+    HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);              // reset status led
+    HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
+    
+    HAL_GPIO_WritePin(LED_B_GPIO_Port, LED_B_Pin, GPIO_PIN_SET);                // turn on no signal led
+    UART_SendStr("NO SIGNAL!\n");
   }
 }
 
