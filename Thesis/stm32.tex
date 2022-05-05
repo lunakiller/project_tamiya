@@ -39,7 +39,7 @@ Cortex-M0 processor is one of the smallest ARM processors available, optimized f
 	
 	\subsection{Cortex-M0+}
 	\label{sub:stm_m0_plus}
-Cortex-M0+ is based on Cortex-M0, thus adopting small size and further improving power efficiency and performance. The instruction set and tools are fully backward compatible with Cortex-M0. ARM reduced pipeline to 2 stages to lower power consumption. Furthermore, the processor has more options available, such as vector table relocation and memory protection unit (MPU).
+Cortex-M0+ is based on Cortex-M0, thus adopting small a size and further improving power efficiency and performance. The instruction set and tools are fully backward compatible with Cortex-M0. ARM reduced pipeline to 2 stages to lower power consumption. Furthermore, the processor has more options available, such as vector table relocation and memory protection unit (MPU).
 	
 	\subsection{Cortex-M7F}
 	\label{sub:stm_m7}
@@ -55,14 +55,14 @@ The ARM itself does not make microcontrollers but instead designs the core and o
 
 This approach is depicted in figure \ref{fig:f303}, where there is a circuit diagram of the STM32F303CC microcontroller that I will use in my project.  You can see a Cortex-M4F processor with all the ST-specific peripherals and memories around.
 \begin{figure}
-\includegraphics[width=0.6\linewidth]{figures/en.bd_stm32f303}
+\includegraphics[width=0.6\linewidth]{images/en.bd_stm32f303}
 \caption{STM32F303 circuit diagram \cite{f303_diagram}} %TODO citace - web ST
 \label{fig:f303}
 \end{figure}
 
 	\subsection{Clock}
 	\label{sub:clock}
-The frequency of the processor, buses, and connected peripherals is derived from their clock source, usually an oscillator. STM32 microcontrollers include internal clock sources, or it is possible to connect external clock sources. The frequency from other clock sources can be multiplied by the internal PLL (Phase-Locked Loop) circuit to speed up the microcontroller further and reach higher frequencies. Several prescalers allow finetuning bus and peripherals speed. Internal clock sources have the advantage of providing a clock source at a low cost with no external components. But being an RC oscillator, the frequency produced is usually not as accurate as an external oscillator.
+The frequency of the processor, buses, and connected peripherals is derived from their clock source, usually an oscillator. STM32 microcontrollers include internal clock sources, or it is possible to connect external clock sources. The frequency from other clock sources can be multiplied by the internal PLL (Phase-Locked Loop) circuit to speed up the microcontroller further and reach higher frequencies. Several prescalers allow finetuning bus and peripherals speed. Internal clock sources have the advantage of providing a clock source at a low cost with no external components. However, being an RC oscillator, the frequency produced is usually not as accurate as an external oscillator.
 
 	\subsection{Interrupts}
 	\label{sub:nvic}
@@ -76,7 +76,7 @@ The Cortex core has a well-defined on-chip bus structure and protocol that allow
 
 The primary bus interface protocol utilized is AHB Lite (Advanced High-performance Bus). This pipelined protocol allows high operation frequency with a small silicon footprint and is used in program memory and system bus interfaces. Usually, the bus can have more devices that act as a master, for example, DMA (Direct Memory Acces) or Ethernet controller. Therefore the processor includes a bus matrix (or AHB interconnect matrix) that manages transfers from multiple bus masters to different slave segments. Particular bus matrix implementation is shown in figure \ref{fig:f303_busmatrix}.
 \begin{figure}
-\includegraphics[width=0.7\linewidth]{figures/f303_bus_matrix}
+\includegraphics[width=0.7\linewidth]{images/f303_bus_matrix}
 \caption{STM32F303CC bus architecture \cite{f303_ref}} %TODO citace - referencak F303
 \label{fig:f303_busmatrix}
 \end{figure}
@@ -110,7 +110,7 @@ If the pin is in alternate function mode, it is controlled by a connected periph
 
 When the pin is set as output or alternate function, it can be push-pull or open-drain. Most of the pins can provide $\pm20 \text{ mA}$ of current, making it possible to drive, for example, a LED directly. However, the total current that a microcontroller can source or sink is limited. It is not advised to connect pins to voltages higher than the supply voltage; yet, many pins are 5V tolerant.
 \begin{figure}
-\includegraphics[width=0.9\linewidth]{figures/io_port}
+\includegraphics[width=0.9\linewidth]{images/io_port}
 \caption{Basic structure of an I/O port bit \cite{f303_ref}} %TODO citace - referencak F303
 \label{fig:gpio}
 \end{figure}
@@ -149,10 +149,10 @@ Peripheral settings are rich to support a wide range of compatible devices. It c
 	\label{sub:i2c}
 The Inter-Integrated Circuit is another commonly used short-range communication bus in embedded systems. It is also a synchronous interface that requires fewer communication wires than SPI but provides lower communication rates. As the SPI interface, the I2C can be used to communicate with small displays, memories, and other rather lower-speed devices.
 
-The peripheral supports both 7-bit and 10-bit addressing modes, programmable analog and digital noise filters, and configurable multiple speed modes depending on the particular microcontroller. Furthermore, the peripheral includes a hardware CRC unit, and it is designed to support SMBus and PMBus protocol used by PCs and servers. DMA channel connecting I2C is also available to provide hardware control of transfers.
+The peripheral supports both 7-bit and 10-bit addressing modes, programmable analog and digital noise filters, and configurable multiple speed modes depending on the particular microcontroller. Furthermore, the peripheral includes a hardware CRC unit, and it is designed to support SMBus and PMBus protocols used by PCs and servers. DMA channel connecting I2C is also available to provide hardware control of transfers.
 
 	\subsection{USART}
 	\label{sub:usart}
 USART stands for Universal Synchronous/Asynchronous Receiver/Transmitter. Although computers are rarely equipped with serial ports these days, serial communication is still highly used in the embedded world as it is simple and easy to use. This peripheral is flexible and has a wide range of applications - it can be used for simple UART communication; in the synchronous mode, it can act like SPI master/slave; it also features hardware management of some signals from industry standards like RS-232 and RS-485. Moreover, there is support for Smartcard communication, IrDA serial infrared communication, and multiprocessor communication. It is also possible to use the peripheral to implement other buses with hardware control, for example, Modbus or 1-Wire.  
 
-The peripheral offers many programmable parameters like baud rate, data word length, the number of stop bits, data order, parity control, oversampling, etc. Furthermore, USART is the source of many interrupts indicating various statuses and flags. The peripheral is connected to the DMA unit like other serial communication peripherals, significantly facilitating handling continuous streams or huge amounts of data.
+The peripheral offers many programmable parameters like baud rate, data word length, the number of stop bits, data order, parity control, oversampling, etc. Furthermore, USART is the source of many interrupts indicating various statuses and flags. The peripheral is connected to the DMA unit like other serial communication peripherals, significantly facilitating the handling of continuous streams or huge amounts of data.
