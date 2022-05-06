@@ -77,7 +77,6 @@ fp-info-cache
 *.synctex.gz
 slehokri_bp.pdf
 main.pdf
-Thesis/Mk/
 *.dvi
 *.bbl
 *.lot
