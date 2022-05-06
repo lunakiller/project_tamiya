@@ -70,12 +70,14 @@ fp-info-cache
 *-backups/
 *.bak
 
-# TEX outputs
+# TEX outputs and files
 *.ist
 *.aux
 *.log
 *.synctex.gz
 slehokri_bp.pdf
+main.pdf
+Thesis/Mk/
 *.dvi
 *.bbl
 *.lot
