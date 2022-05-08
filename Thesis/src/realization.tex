@@ -39,6 +39,8 @@ As stated in section \ref{sec:hw_control}, the prototyping was done using a Blac
 
 First, the original PCB was measured so that the new PCB could be designed according to these dimensions. A minor modification was done; the new PCB has a cutout on the top to fit the nRF24 communication module.
 
+The communication module and control potentiometers are directly soldered to the board. In contrast, the power supply is connected via the JST XH connector, and rotary encoders are connected via simple pin sockets shown in figure *fig*.
+
 Microcontroller circuitry was designed according to Section 7 of \cite{f3_design_an}. Four \SI{100}{\nF} ceramic decoupling capacitors were placed as close to the microcontroller as possible. Since the VBAT pin is not utilized, it was connected to the supply voltage (VDD) via another \SI{100}{\nF} ceramic capacitor. A bigger \SI{4.7}{\uF} decoupling capacitor is placed on the main supply line close to the microcontroller.
 
 The reset circuit was also inspired by \cite{f3_design_an} and consists of a button and a capacitor connected to the ground that forms a low-pass filter to reduce push-button bounce. BOOT0 pin is pulled to the ground with a resistor, but switching the boot mode with a jumper placed on J1 [\todo reference] is possible.
@@ -67,9 +69,21 @@ The RGB LED resistor values were chosen experimentally to achieve similar lumino
 \section{Car}
 \label{sec:real_car}
 \subsection{Power supply}
-The main power source is a 2-cell LiPo battery discussed earlier in section \ref{sec:hw_mods}, which is connected via an XT60 connector to the ESC. Between the battery and ESC is an ACS712 current measurement module with XT60 connectors on both sides. [\todo fotka]
+The main power source is a 2-cell LiPo battery discussed earlier in section \ref{sec:hw_mods}, which is connected via an XT60 connector to the ESC.
+
+Between the battery and ESC is an ACS712 current measurement module with XT60 connectors on both sides. The module is connected backward as only a positive current is measured. Consequently, the sensor output is within 0.5 to 2.5V, and ADC can safely measure it without extra components. [\todo fotka]
 
 The control board is powered by ESC's Battery Elimination Circuit (BEC), producing \SI{5}{\V} with a maximum current of \SI{2}{\A}. Therefore ESC's power switch also acts as the main power switch. Moreover, BEC supplies power to the servo, current sensor, and, as with the transmitter, to the communication module and LEDs.
 
 The rest of the electronics is powered by \SI{3.3}{\V} regulated by BlackPill's onboard voltage regulator. Marking on the bottom side of the board claims that the regulator can produce \SI{180}{\mA} of output current, which should be sufficient to power all the components; hence no external voltage regulator was added.
-	
+
+\subsection{Board design}
+The Control board for the car was created on the perfboard as it allowed for more flexibility in design and testing, and the space available in the car is quite ample. The board looks more complex than the board in the transmitter due to the number of components and consists of necessary connectors, a BlackPill board, an OLED display, an SD card slot, and LEDs.
+
+The main BlackPill board is soldered directly to the perfboard to ensure rigidity. The OLED display and SD card slot were also soldered directly to the board under the BlackPill. Right under the display is a push-button used to wake it up, and to the right of the display, there is a 2-position DIP switch.
+
+Everything not soldered to the board is connected using JST XH connectors. At first, simple pin headers were used as connectors, but the cable was sometimes disconnected from the board since the car moves and generates vibrations. JST XH connectors feature a small locking mechanism to reduce the risk of disconnection and are therefore suitable.
+
+The board was designed so that connectors are grouped by type. In the upper left corner are the connectors for measuring the voltage, current, and temperature of the BLDC. More to the right are the connectors for the communication module, 2-pin for power, and 6-pin for SPI communication. To the right of the BlackPill board are connectors for controlling the car; closer to the board is the servo connector, and next to it is the ESC connector, which supplies voltage to the board. The last connector in the lower right corner is for the IMU. [\todo fotka]
+
+In the right upper part of the board, there is again an RGB LED with individual channels driven by N-channel MOSFETs. The same resistor values were used since the RGB LED is the same type as the RGB LED in the transmitter. An additional wide angle white LED controlled by a switch was mounted on the board. The purpose of this LED is to illuminate the car body, so the car is better visible at night.

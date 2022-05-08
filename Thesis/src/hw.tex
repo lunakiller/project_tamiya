@@ -117,7 +117,11 @@ In addition to measuring the voltage, which is necessary for battery monitoring 
 The transmitter does not use any particular sensor; only battery voltage is measured via the voltage divider.
 
 \subsection{Current}		%TODO obrazek?
-The current is measured using a module with a 30A version of an ACS712 chip from \textit{Allegro MicroSystems}. It is a small linear current sensor based on the Hall effect. Current flowing through the sensor's copper terminals generates a magnetic field, which is then sensed by the integrated Hall-effect circuit. The output of the sensor is a voltage proportional to the flowing current. Current sense terminals are electrically isolated from the rest of the sensor; therefore, it is possible to measure high voltages without external electrical isolation. The sensor is capable of measuring both AC and DC current with a stated total output error of $1.5\%$ \cite{acs_datasheet}. 
+The current is measured using a module with a 30A version of an ACS712 chip from \textit{Allegro MicroSystems}. It is a small linear current sensor based on the Hall effect. Current flowing through the sensor's copper terminals generates a magnetic field, which is then sensed by the integrated Hall-effect circuit.
+
+The output of the sensor is a voltage proportional to the flowing current. If no current is flowing, the sensor output is the supply voltage divided by two. If a positive current flows, the output voltage increases, whereas the output voltage decreases if the current is negative.
+
+Current sense terminals are electrically isolated from the rest of the sensor; therefore, it is possible to measure high voltages without external electrical isolation. The sensor is capable of measuring both AC and DC current with a stated total output error of $1.5\%$ \cite{acs_datasheet}. 
 
 \subsection{Temperature}	%TODO obrazek?
 A digital thermometer DS18B20 provides temperature measurement. The sensor is manufactured by \textit{Dallas Semiconductor}, which \textit{Maxim Integrated} later acquired. It can measure temperatures from \SI{-55}{\degreeCelsius} to \SI{125}{\degreeCelsius}. It has a programmable resolution ranging from 9 to 12 bit and $\pm$\SI{0.5}{\degreeCelsius} over most of the measuring range. The sensor uses a 1-Wire interface, which requires only one pin for communication. When combined with parasitic power mode, the whole thermometer requires only two pins for operation \cite{ds_datasheet}.
