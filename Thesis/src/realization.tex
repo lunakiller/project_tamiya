@@ -28,8 +28,48 @@ A fully charged 2-cell LiPo battery reaches \SI{8.4}{\V}, then the output of the
 which is safely within the ADC range.
 
 \subsection{Controls}
-The transmitter was supplied with a steering wheel and trigger as 5kohm potentiometers. Since they are old, a \SI{100}{\nF} capacitor was added between the output pin of both potentiometers and ground to form a low-pass filter and smooth out the output signal.
+The transmitter was supplied with a steering wheel and trigger as \SI{5}{\kohm} potentiometers. Since they are old, a \SI{100}{\nF} capacitor was added between the output pin of both potentiometers and ground to form a low-pass filter and smooth out the output signal.
 
-Potentiometers used for control trimming were replaced with quadrature rotary encoders with push buttons. Encoders have screw threads, as can be seen in figure *fig*, which fit into the original holes. Since encoders are fixed to the transmitter, a simple connector made from a pin socket was soldered to encoder pins [TODO: fotka].
+Potentiometers used for control trimming were replaced with quadrature rotary encoders with push buttons. Encoders have screw threads, as can be seen in figure *fig*, which fit into the original holes. Since encoders are fixed to the transmitter, a simple connector made from a pin socket was soldered to encoder pins [\todo fotka].
 
 \subsection{PCB design}
+As the space in the transmitter case was limited, it was decided not to use the perfboard but to create the PCB. It was designed in KiCad and manufactured by JLCPCB. The board consists of connectors, a voltage regulator, an MCU circuit with a crystal oscillator, and an RGB LED driven by N-channel MOSFETs. All traces are rounded to eliminate the possibility of signal reflection.
+
+As stated in section \ref{sec:hw_control}, the prototyping was done using a BlackPill board with a microcontroller STM32F303CCT6. This microcontroller was suitable and was therefore selected also for the final design.
+
+First, the original PCB was measured so that the new PCB could be designed according to these dimensions. A minor modification was done; the new PCB has a cutout on the top to fit the nRF24 communication module.
+
+Microcontroller circuitry was designed according to Section 7 of \cite{f3_design_an}. Four \SI{100}{\nF} ceramic decoupling capacitors were placed as close to the microcontroller as possible. Since the VBAT pin is not utilized, it was connected to the supply voltage (VDD) via another \SI{100}{\nF} ceramic capacitor. A bigger \SI{4.7}{\uF} decoupling capacitor is placed on the main supply line close to the microcontroller.
+
+The reset circuit was also inspired by \cite{f3_design_an} and consists of a button and a capacitor connected to the ground that forms a low-pass filter to reduce push-button bounce. BOOT0 pin is pulled to the ground with a resistor, but switching the boot mode with a jumper placed on J1 [\todo reference] is possible.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.55\linewidth]{fig/oscillator.pdf}
+\caption{Crystal oscillator circuit}
+\label{fig:osc}
+\end{figure}
+
+External \SI{12}{\MHz} crystal oscillator XT324 with a load capacitance of \SI{20}{\pF} provides the clock for the microcontroller \cite{xt324_datasheet}. The circuit of the oscillator is in figure \ref{fig:osc}. Equation \ref{eq:load_cap} mentioned in Section 3.3 of \cite{osc_design_an} was used to calculate values of external load capacitances:
+\begin{equation}
+C_L = \frac{C_{L1} \cdot C_{L2}}{C_{L1} + C_{L2}} + C_S\ ,
+\label{eq:load_cap}
+\end{equation}
+where $C_L$ is the crystal's desired load capacitance, $C_{L1}$ and $C_{L2}$ are values of external capacitors and $C_S$ is the stray capacitance of the printed circuit board and connections. A rough estimate of $C_S = \SI{7}{\pF}$ according to Section 6.3.7 of \cite{f303_datasheet} and Section 3.3 of \cite{osc_design_an} was used for computation. Assuming that $C_{L1} = C_{L2}$, we have
+\begin{equation}
+C_L - C_S = \frac{C_{L1} \cdot C_{L1}}{C_{L1} + C_{L1}} = \frac{C_{L1}}{2} = \SI{13}{\pF}\ ,
+\end{equation}
+and therefore the external load capacitance should be \SI{26}{\pF}. As this is a non-standard value, \SI{27}{\pF} capacitors were used instead.
+
+The RGB LED resistor values were chosen experimentally to achieve similar luminosity of all channels as no datasheet is available. If all channels are active, the total current through the LED does not exceed the assumed maximal \SI{20}{\mA}. [\todo fotka]
+
+
+\section{Car}
+\label{sec:real_car}
+\subsection{Power supply}
+The main power source is a 2-cell LiPo battery discussed earlier in section \ref{sec:hw_mods}, which is connected via an XT60 connector to the ESC. Between the battery and ESC is an ACS712 current measurement module with XT60 connectors on both sides. [\todo fotka]
+
+The control board is powered by ESC's Battery Elimination Circuit (BEC), producing \SI{5}{\V} with a maximum current of \SI{2}{\A}. Therefore ESC's power switch also acts as the main power switch. Moreover, BEC supplies power to the servo, current sensor, and, as with the transmitter, to the communication module and LEDs.
+
+The rest of the electronics is powered by \SI{3.3}{\V} regulated by BlackPill's onboard voltage regulator. Marking on the bottom side of the board claims that the regulator can produce \SI{180}{\mA} of output current, which should be sufficient to power all the components; hence no external voltage regulator was added.
+	
