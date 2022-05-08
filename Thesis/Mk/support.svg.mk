@@ -15,7 +15,7 @@ all: $(targets)
 pdf: $(PDF)
 
 %.pdf: %.svg
-	$(INKSCAPE) --export-pdf=$(<:.svg=.pdf) --export-latex --export-area-page $<
+	$(INKSCAPE) --export-pdf=$(<:.svg=.pdf) --export-area-page $<
 
 clean:
 	$(RM) $(PDF)
