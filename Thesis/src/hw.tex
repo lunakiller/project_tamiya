@@ -107,7 +107,9 @@ The project uses wireless modules equipped with nRF24L01+ transceiver chip from 
 
 According to the product specification [\todo cit-Amazon], the range should be more than \SI{800}{\m} line-of-sight. Thanks to the \textit{Enhanced ShockBurst protocol} and its Auto Acknowledgement function [\todo citace], attaching a small payload to the ACK packet is possible. This feature is advantageously used to report car status back to the transmitter.
 
-An additional adapter board is utilized to supply voltage to the nRF24 module. It has the same pinout and includes a voltage regulator with all needed external components. The Adapter board is powered with 5V, which are then regulated to 3.3V. This setup ensures a stable power supply for the nRF24 module.
+An additional adapter board is utilized to supply voltage to the nRF24 module. It has the same pinout and includes a voltage regulator with all needed external components. The Adapter board is powered with \SI{5}{\V}, which are then regulated to \SI{3.3}{\V}. This setup ensures a stable power supply for the nRF24 module.
+
+As the adapter board is only equipped with a pin socket for connection, which is unsuitable for use in vibration generating environments, it was removed. The nRF24 module was instead soldered directly to the adapter, as were the wires. The entire communication module is thus more robust and takes up less space.
 
 
 \section{Sensors}
