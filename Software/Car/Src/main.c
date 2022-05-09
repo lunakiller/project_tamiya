@@ -25,7 +25,7 @@
   *                     - calibrate current sensor (VBAT voltage?)
   *                     
   * @author         : Kristian Slehofer
-  * @date           : 2. 5. 2022
+  * @date           : 9. 5. 2022
   ******************************************************************************
   * @attention
   *
@@ -232,10 +232,10 @@ int main(void)
   }
 
                                                                                 // start PWMs
-  HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_2);                                     // servo
-  HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_3);                                     // bldc
-  // __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_2, PT_RC_NEUTRAL);               // reset servo
-  // __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_3, PT_RC_NEUTRAL);               // reset bldc
+  HAL_TIM_PWM_Start(&htim8, SERVO_CHANNEL);                                     // servo
+  HAL_TIM_PWM_Start(&htim8, BLDC_CHANNEL);                                      // bldc
+  // __HAL_TIM_SET_COMPARE(&htim8, SERVO_CHANNEL, PT_RC_NEUTRAL);               // reset servo
+  // __HAL_TIM_SET_COMPARE(&htim8, BLDC_CHANNEL, PT_RC_NEUTRAL);                // reset bldc
   UART_SendStr("PWMs started!\n");
 
   OneWire_Init();                                                               // init 1-Wire bus and temperature sensor
@@ -438,8 +438,8 @@ int main(void)
             throttle = -PT_MAXTHRTL;
           }
           
-          __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_2, PT_RC_NEUTRAL - steer);  // update PWM settings
-          __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_3, PT_RC_NEUTRAL - throttle);
+          __HAL_TIM_SET_COMPARE(&htim8, SERVO_CHANNEL, PT_RC_NEUTRAL - steer);  // update PWM settings
+          __HAL_TIM_SET_COMPARE(&htim8, BLDC_CHANNEL, PT_RC_NEUTRAL - throttle);
 
           __HAL_TIM_SET_COUNTER(&htim17, 0);                                    // reset safety timer
 
@@ -1521,8 +1521,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     display_refresh = true;
   }
   else if(htim->Instance == TIM17) {                                            // safety timer interrupt
-    __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_2, 1500);                         // neutral
-    __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_3, 1500);
+    __HAL_TIM_SET_COMPARE(&htim8, SERVO_CHANNEL, 1500);                         // neutral
+    if(__HAL_TIM_GET_COMPARE(&htim8, BLDC_CHANNEL))                             // reset BLDC only if its already initialized (>0)
+      __HAL_TIM_SET_COMPARE(&htim8, BLDC_CHANNEL, 1500);
 
     HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);              // reset status led
     HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);

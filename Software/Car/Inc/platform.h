@@ -5,7 +5,7 @@
   *                   and functions
   *                     
   * @author         : Kristian Slehofer
-  * @date           : 24. 4. 2022
+  * @date           : 9. 5. 2022
   ******************************************************************************
   */
 
@@ -30,6 +30,9 @@
 #define SSD1306_HEIGHT    32
 #define MPU6050_I2C_PORT  hi2c1
 // #define SD_SPI_HANDLE     hspi2    // needs to be defined in main.h
+
+#define SERVO_CHANNEL     TIM_CHANNEL_2
+#define BLDC_CHANNEL      TIM_CHANNEL_3
 
 
 extern UART_HandleTypeDef UART;
