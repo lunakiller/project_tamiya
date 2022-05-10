@@ -37,9 +37,9 @@ Quadrature rotary encoders utilize timers TIM2 and TIM4, which are in Encoder mo
 
 SW1 and SW2 pins belong to the DIP switch and are configured in external interrupt mode with both rising and falling edge detection.
 
-USART2 peripheral is configured as debug serial port. Baud rate is set to \SI{921600}{\bit\per\second} with 8 bits word length and one stop bit.
+USART2 peripheral is configured as debug serial port. Baud rate is set to \SI{921600}{\bit\per\second} with 8~bits word length and one stop bit.
 
-I2C1 in Fast Mode Plus with a frequency of \SI{1}{\MHz} connects the OLED display, and LED pins are simple outputs. Furthermore, TIM6 at \SI{1}{\Hz} and TIM16 at \SI{4}{\Hz}, both timers with interrupts enabled, are used for basic timing purposes.
+I2C1 in Fast Mode Plus with a frequency of \SI{1}{\MHz} connects the OLED display. LED pins are simple outputs. Furthermore, TIM6 at \SI{1}{\Hz} and TIM16 at \SI{4}{\Hz}, both timers with interrupts enabled, are used for basic timing purposes.
 
 Figure \ref{fig:tx_conf} shows the complete pinout in STM32CubeMX.
 
@@ -54,14 +54,56 @@ In the final part of initialization, all the timers, including the timers used f
 
 \subsection{Main control loop}
 The control loop is designed to be as non-blocking and interrupt-driven as possible. Therefore, it consists of a set of 'if' blocks. However, some parts remained blocking. The reason is some of the drivers are blocking and do not allow the use of DMA. Rewriting them was hardly possible or too time-consuming. This is especially true for OLED refreshing, which takes the longest time. Execution of given 'if' block is controlled by flags, internally boolean values, set by appropriate interrupt routines.
+\begin{itemize}
+	\item \begin{description}
+\item[\textit{'trigger\_data\_rdy'}:]
+The flag is set by ADC interrupt routines and indicates available control values. This block processes and averages measured values from control potentiometers and recalculates them using hardware limits for direct usage in the car. The flag is reset at the end of the block.
+\end{description}
 
-The \textit{'trigger\_data\_rdy'} flag is set by ADC interrupt routines, and it controls the execution of the first block. It processes and averages measured data from control potentiometers and recalculates the values using hardware limits for direct usage in the car.
-
-The block controlled by the \textit{'adc\_data\_bat\_rdy'} flag is similar to the previous block. First, it averages the measured Vrefint and battery voltage data. The next step is VDDA calculation:
+	\item \begin{description}
+\item[\textit{'adc\_data\_bat\_rdy'}:]
+This block is similar to the previous block and indicates available voltage measurements.  First, it averages the measured Vrefint and battery voltage data. The next step is VDDA calculation:
 \begin{equation}
 	V_{DDA} = \frac{\SI{3.3}{\V} \cdot Vrefint_{cal}}{Vrefint_{meas}}\ ,
 \end{equation}
-where $Vrefint_{cal}$ is a factory-trimmed value obtained from register and $Vrefint_{meas}$ is measured internal reference voltage. The formula was taken from Section 15.3.32 in \cite{f303_ref}. This computed value is used to convert the ADC battery measurement to the actual voltage. The corresponding ADC sets the flag.
+where $Vrefint_{cal}$ is a value acquired during the manufacturing process at $V_{DDA} = \SI{3.3}{\V}$ and obtained from the register, and $Vrefint_{meas}$ is measured internal reference voltage. The formula was taken from Section 15.3.32 in \cite{f303_ref}. This computed value is used to convert the ADC battery measurement to the actual voltage.
+
+The corresponding ADC sets the flag, and the program resets it at the end of the block. A~\SI{4}{\Hz} timer triggers the ADC measurement itself.
+\end{description}
+
+	\item \begin{description}
+\item[\textit{'sending'}:]
+This is the first phase of the non-blocking packet transmission routine. It is executed only if the flag is false, indicating that the previous transmission is completed. First, the flag is set, trimming values are added to the control values from potentiometers, and a 4-byte data packet is formed. After that, packet transmission is started. The flag remains set.
+\end{description}
+
+	\item \begin{description}
+\item[\textit{'NRF\_IRQ'}:]
+This is the second, final phase of the packet transmission routine. The communication module's interrupt pin sets the flag once it finishes the transmission. The routine starts with checking the transmission status and reading the received payload. If the payload has the expected size, it is parsed into related variables. Then actions depending on the transmission status follow.
+
+The corresponding counter variable is incremented if the module has reached the maximum retransmit count. This variable is used to detect signal loss as described in section \ref{sub:tx_sig_loss}. If the transmission was successful, the previously mentioned variable is reset, the command frequency counter is incremented, and the status LED is toggled.
+
+The last step is resetting both the \textit{'NRF\_IRQ'} and \textit{'sending'} flags.
+\end{description}
+
+	\item \begin{description}
+\item[\textit{'display\_refresh'}:]
+This section is responsible for refreshing the information on the OLED display. An interrupt routine of a \SI{4}{\Hz} timer sets the flag, and the program resets it at the end of the block. Therefore, the display runs with a framerate of about \SI{4}{FPS}.
+\end{description}
+
+	\item \begin{description}
+\item[\textit{'ENCx\_IRQ'}:]
+This section is executed when the rotary encoder's control timer triggers the interrupt routine upon detecting rotation. Depending on the direction of rotation, the trimming value is increased or decreased. The flag is reset at the end of the block.
+
+Each encoder has its own control block modifying the appropriate trimming value.
+\end{description}
+
+	\item \begin{description}
+\item[\textit{'ENCx\_reset'}:]
+This flag is set by the encoder's push-button. The purpose is to reset the appropriate trimming value to zero. At the end of the block, the flag is reset.
+\end{description}
+
+\end{itemize}
+
 
 \subsection{ADC data processing}
 \label{sub:adc}
@@ -75,9 +117,30 @@ Whether the first or the second half is to be processed is controlled by an inte
 
 This approach is repeated, ensuring that the new measurements do not overwrite the values already in the buffer and, therefore, do not affect the value obtained.
 
-\subsection{UART debug prints}
+\subsection{Signal loss detection}
+\label{sub:tx_sig_loss}
+Since the detection of signal loss by the transmitter is not as important as in the case of a car and serves mainly for information purposes, the implementation is fairly simple.
+
+It depends on the counter variable \textit{'retransmits\_in\_row'}, which is incremented whenever the communication module reaches the maximum number of packet retransmits. When this variable is greater than 15, it is evaluated as a signal loss in the 4Hz timer interrupt routine, and the corresponding flag is set.
+
+This status is visualized on the OLED screen and by changing the color of the status LED to blue.
+
+\subsection{Status visualization?}
 \todo
 
+\subsection{UART debug prints}
+One of the UARTs is utilized for printing debug information. Corresponding pins are available on the connector J3; configuration is in section \ref{sub:tx_conf}.
+
+The printing is enabled by default after the application start and prints the initialization progress. Afterward, the printing is dependent on the state of the Switch1 (the first lever on the DIP switch SW2).
+
+The UART is deinitialized before entering the main control loop if the switch is in the off position or stays initialized otherwise. If debug prints are enabled, the transmitter informs about:
+\begin{itemize}
+\item LiPo battery voltage and VDDA voltage whenever new data is available,
+\item encoder rotation,
+\item switch position change,
+\item no signal state.
+\end{itemize}
+Debug printing can be enabled or disabled anytime during the application execution.
 
 
 
