@@ -117,16 +117,46 @@ Whether the first or the second half is to be processed is controlled by an inte
 
 This approach is repeated, ensuring that the new measurements do not overwrite the values already in the buffer and, therefore, do not affect the value obtained.
 
-\subsection{Signal loss detection}
+\subsection{Signal quality and loss detection}
 \label{sub:tx_sig_loss}
-Since the detection of signal loss by the transmitter is not as important as in the case of a car and serves mainly for information purposes, the implementation is fairly simple.
+The nRF24 communication module does not support any detailed form of RSSI (Received Signal Strength Indicator). The only information obtainable from the module is whether the signal during the last transmission was below or under a certain threshold. Therefore, a simple signal quality indicator is implemented in the software.
 
-It depends on the counter variable \textit{'retransmits\_in\_row'}, which is incremented whenever the communication module reaches the maximum number of packet retransmits. When this variable is greater than 15, it is evaluated as a signal loss in the 4Hz timer interrupt routine, and the corresponding flag is set.
+After every successful packet transmission, the counter variable \textit{'tx\_freq\_cnt'} is incremented. During the callback routine of a 1Hz timer, this value is copied into \textit{'tx\_freq'} variable and displayed. This value, expressing the number of packets per second, is used to measure the signal quality. The thresholds were determined experimentally based on the maximum observed number of packets per second.
+
+Since the detection of signal loss by the transmitter is not as important as in the case of a car and serves mainly for information purposes, the implementation is quite simple.
+
+It depends on the counter variable \textit{'retransmits\_in\_row'}, which is incremented whenever the communication module reaches the maximum number of packet retransmits and reset if the transmission was successful. When this variable is greater than 15, it is evaluated as a signal loss in the 4Hz timer interrupt routine, and the corresponding flag is set.
 
 This status is visualized on the OLED screen and by changing the color of the status LED to blue.
 
-\subsection{Status visualization?}
-\todo
+\subsection{Status visualization}
+Both the RGB LED and OLED display are used to visualize the current status. The reasons for the choice are discussed in section \ref{sec:hw_status}.
+
+The RGB LED is clearly visible and serves as a quick notification of the communication and the transmitter's battery status. Color options and their meaning are described in table \ref{tab:led_status}.
+\begin{table}[ht]
+   \renewcommand{\arraystretch}{1.1}
+   \centering
+    \caption{Explanation of LED status}\label{tab:led_status}   
+    \begin{tabular}{c c c}
+       \noalign{\hrule height 1.1pt}\noalign{\smallskip}
+	   \bfseries RGB LED & \bfseries Communication status & \bfseries Battery status\\[0.2em]
+	\noalign{\hrule height 1.1pt}\noalign{\smallskip}     
+flashing green	& OK				& $>\,$\SI{6.8}{\V} \\
+flashing red		& OK				& $<\,$\SI{6.8}{\V} \\
+blue				& signal lost	& --	\\
+       \noalign{\smallskip}\noalign{\hrule height 1.1pt}
+    \end{tabular}
+\end{table} 
+
+The small OLED display is more demanding for quick orientation in the displayed data. On the other hand, it provides more information about the transmitter and even the car. The display interface is divided into two main parts.
+
+The first in the upper part of the display resembles a status bar and provides information about the car, as indicated by the icons: the BLDC temperature and battery state. In case of signal loss, this information is displayed here.
+
+The rest of the screen is separated by a line and belongs to the transmitter status. Information about the current position of control potentiometers is displayed in the middle, along with the trim values. The position of potentiometers is not expressed relatively in percentage. Instead, the actual value sent to the car is displayed. The bottom part offers information about packets per second and the transmitter's battery status.
+
+Both battery indicators are interactive and, depending on the voltage, up to 4 bars are displayed. If the battery voltage drops below the threshold of \SI{6.8}{\V}, a flashing exclamation mark is displayed in the battery logo instead. The signal quality indicator is also interactive. [\todo fotka]
+
+All logos were created in GIMP and exported as XBM files. These were later "converted" to header files by changing the file extension.
 
 \subsection{UART debug prints}
 One of the UARTs is utilized for printing debug information. Corresponding pins are available on the connector J3; configuration is in section \ref{sub:tx_conf}.
