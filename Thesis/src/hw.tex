@@ -21,7 +21,7 @@ All the electronics were removed, leaving only the plastic chassis. The broken 5
 
 A 2-cell LiPo battery with a capacity of \SI{2200}{\milli\A\hour} was chosen to supply power to the electronics. According to the product specification, this battery should withstand 35C of continuous current \cite{lipo_car}. The term "35C" means "35 times the battery capacity". For this particular battery, that means $35 \cdot \SI{2.2}{\A} = \SI{77}{\A}$ of current, which is more than sufficient.
 
-The transmitter underwent a similar procedure. The original circuit board and the antenna were also removed, retaining only trigger potentiometers and plastic parts. Potentiometers used for throttle and steering trimming were replaced with rotary encoders. Again, the power supply is a 2-cell LiPo battery with a lower capacity of only \SI{900}{\milli\A\hour} and 25C of continuous current \cite{lipo_tx}.
+The transmitter underwent a similar procedure. The original circuit board and the antenna were also removed, retaining only trigger potentiometers and plastic parts. Potentiometers used for throttle and steering trimming were replaced with rotary encoders. Again, the power supply is a 2-cell LiPo battery with a lower capacity of only \SI{900}{\milli\A\hour} and 25C of continuous current \cite{lipo_tx}. [\todo image?]
 
 
 
@@ -105,7 +105,7 @@ BlackPill was selected for its better processor based on an ARM M4 core with FPU
 \label{sec:hw_comm}
 The project uses wireless modules equipped with nRF24L01+ transceiver chip from \textit{Nordic Semiconductor} [\todo citace], a power amplifier, a low-noise amplifier, and an external antenna. The chip operates in the worldwide \SI{2.4}{\GHz} ISM band and communicates with the MCU using the SPI bus. Configurable parameters include channel, data rate, and output power. These modules fit all the requirements, and in addition, they are cheap and readily available.
 
-According to the product specification [\todo cit-Amazon], the range should be more than \SI{800}{\m} line-of-sight. Thanks to the \textit{Enhanced ShockBurst protocol} and its Auto Acknowledgement function [\todo citace], attaching a small payload to the ACK packet is possible. This feature is advantageously used to report car status back to the transmitter.
+According to the product specification [\todo citace-Amazon?], the range should be more than \SI{800}{\m} line-of-sight. Thanks to the \textit{Enhanced ShockBurst protocol} and its Auto Acknowledgement function [\todo citace], attaching a small payload to the ACK packet is possible. This feature is advantageously used to report car status back to the transmitter.
 
 An additional adapter board is utilized to supply voltage to the nRF24 module. It has the same pinout and includes a voltage regulator with all needed external components. The Adapter board is powered with \SI{5}{\V}, which are then regulated to \SI{3.3}{\V}. This setup ensures a stable power supply for the nRF24 module.
 
@@ -123,17 +123,17 @@ The current is measured using a module with a 30A version of an ACS712 chip from
 
 The output of the sensor is a voltage proportional to the flowing current. If no current is flowing, the sensor output is the supply voltage divided by two. If a positive current flows, the output voltage increases, whereas the output voltage decreases if the current is negative.
 
-Current sense terminals are electrically isolated from the rest of the sensor; therefore, it is possible to measure high voltages without external electrical isolation. The sensor is capable of measuring both AC and DC current with a stated total output error of $1.5\%$ \cite{acs_datasheet}. 
+Current sense terminals are electrically isolated from the rest of the sensor; therefore, it is possible to measure high voltages without external electrical isolation. The sensor is capable of measuring both AC and DC current with a stated total output error of $1.5\%$ \cite{acs_datasheet}. [\todo image?]
 
 \subsection{Temperature}	%TODO obrazek?
 A digital thermometer DS18B20 provides temperature measurement. The sensor is manufactured by \textit{Dallas Semiconductor}, which \textit{Maxim Integrated} later acquired. It can measure temperatures from \SI{-55}{\degreeCelsius} to \SI{125}{\degreeCelsius}. It has a programmable resolution ranging from 9 to 12 bit and $\pm$\SI{0.5}{\degreeCelsius} over most of the measuring range. The sensor uses a 1-Wire interface, which requires only one pin for communication. When combined with parasitic power mode, the whole thermometer requires only two pins for operation \cite{ds_datasheet}.
 
-The project uses the TO-92 package, which was advantageous because of the limited space around the BLDC. The small size made it possible to mount the sensor on the back of the motor housing with the aid of heat-conducting foil.
+The project uses the TO-92 package, which was advantageous because of the limited space around the BLDC. The small size made it possible to mount the sensor on the back of the motor housing with the aid of heat-conducting foil. [\todo image?]
 
 \subsection{IMU}			%TODO obrazek?
 For motion measurements, a module with MPU6050 from \textit{InvenSense} was selected as it was the cheapest option. The sensor packs a 3-axis accelerometer, which provides linear acceleration data, and a 3-axis gyroscope, which provides angular velocity data, in one chip. Both the accelerometer and gyroscope have programmable measurement ranges. Communication with the sensor is performed using the I\textsuperscript{2}C bus. An external 3-axis magnetometer can be attached straight to the sensor, extending the sensor's capability \cite{mpu_datasheet}.
 
-The sensor claims it has a DMP (Digital Motion Processor) capable of merging the accelerometer and gyroscope data on-chip. Sadly, this feature is undocumented and available only when using \textit{InvenSense's} official \textit{Embedded MotionApps software}. Another possibility would be using \textit{I\textsuperscript{2}Cdevlib}, where the DMP functionality was reverse-engineered \cite{i2cdevlib}. However, the \textit{I\textsuperscript{2}Cdevlib} is written for Arduino and would require porting the code to the STM32 with uncertain results. Therefore only raw accelerometer and gyroscope data are used.
+The sensor claims it has a DMP (Digital Motion Processor) capable of merging the accelerometer and gyroscope data on-chip. Sadly, this feature is undocumented and available only when using \textit{InvenSense's} official \textit{Embedded MotionApps software}. Another possibility would be using \textit{I\textsuperscript{2}Cdevlib}, where the DMP functionality was reverse-engineered \cite{i2cdevlib}. However, the \textit{I\textsuperscript{2}Cdevlib} is written for Arduino and would require porting the code to the STM32 with uncertain results. Therefore only raw accelerometer and gyroscope data are used. [\todo image?]
 
 \section{Status info}
 \label{sec:hw_status}

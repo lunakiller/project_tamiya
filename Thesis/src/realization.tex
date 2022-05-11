@@ -9,7 +9,7 @@ Since there are no spare parts available for the transmitter or the car, all mod
 \section{Transmitter}
 \label{sec:real_tx}
 \subsection{Power supply}
-As described in section \ref{sec:hw_mods}, the transmitter is powered by a 2-cell LiPo battery with a nominal voltage of \SI{7.4}{\V}. The battery is connected via an XT60 connector and a switch to a step-down converter module with an LM2596 chip. The module is needed to regulate the battery voltage to \SI{5}{\V} to power the control board.
+As described in section \ref{sub:hw_mods}, the transmitter is powered by a 2-cell LiPo battery with a nominal voltage of \SI{7.4}{\V}. The battery is connected via an XT60 connector and a switch to a step-down converter module with an LM2596 chip. The module is needed to regulate the battery voltage to \SI{5}{\V} to power the control board.
 
 This voltage is used for the RGB LED, communication module, and linear voltage regulator AP2111, which regulates it to \SI{3.3}{\V} used to power the rest of the components. This regulator was selected because of the low dropout voltage of only \SI{250}{\mV} and high output current of \SI{600}{\mA} \cite{ap_datasheet}.		%TODO measure TX current?
 
