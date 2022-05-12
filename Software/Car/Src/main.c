@@ -333,8 +333,8 @@ int main(void)
       Error_Handler();
     }
 
-    fres = f_lseek(&file, 6144000);                                             // pre-allocate 6MiB of space, shoul be enough for ~40 min of logs
-    if(fres != FR_OK || f_tell(&file) != 6144000) {
+    fres = f_lseek(&file, 10240000);                                             // pre-allocate 10MiB of space, shoul be enough for ~40 min of logs
+    if(fres != FR_OK || f_tell(&file) != 10240000) {
       PrintError("f_lseek error (%i)!", fres);
       Error_Handler();
     }
