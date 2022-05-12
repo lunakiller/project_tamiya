@@ -16,6 +16,10 @@ The control program is almost exclusively interrupt-driven. Emphasis has been pl
 \section{File structure}
 \todo
 
+\subsection{Communication parameters}
+\todo
+
+
 \section{Transmitter}
 \subsection{Peripherals and pin configuration}
 \label{sub:tx_conf}
@@ -46,7 +50,7 @@ Figure \ref{fig:tx_conf} shows the complete pinout in STM32CubeMX.
 \subsection{Application start}
 The program starts with auto-generated initialization of all necessary peripherals. Debug UART is enabled after start by default. Afterward, an orange LED visible from the backside of the transmitter is turned on to indicate application initialization.
 
-First, the OLED display is initialized, and the project logo is displayed. At the same time, a greeting is sent via UART, and the RGB LED flashes through each channel. Automatic self-calibration of both ADCs follows, and the Vrefint calibration value is obtained from the appropriate register. This value is later used to calculate VDDA. Then the communication module is initialized with parameters defined in \textit{platform.h}.
+First, the OLED display is initialized, and the project logo is displayed. At the same time, a greeting is sent via UART, and the RGB LED flashes through each channel. Automatic self-calibration of both ADCs follows, and the Vrefint calibration value is obtained from the appropriate register. This value is later used to calculate VDDA. Then the communication module is initialized in transmitter mode with parameters defined in \textit{project\_tamiya.h}.
 
 After that, the ADC responsible for reading values of control potentiometers is started in circular DMA mode, as described in section \ref{sub:tx_conf}. Processing of the data is explained in section \ref{sub:adc}.
 
@@ -121,7 +125,7 @@ This approach is repeated, ensuring that the new measurements do not overwrite t
 \label{sub:tx_sig_loss}
 The nRF24 communication module does not support any detailed form of RSSI (Received Signal Strength Indicator). The only information obtainable from the module is whether the signal during the last transmission was below or under a certain threshold. Therefore, a simple signal quality indicator is implemented in the software.
 
-After every successful packet transmission, the counter variable \textit{'tx\_freq\_cnt'} is incremented. During the callback routine of a 1Hz timer, this value is copied into \textit{'tx\_freq'} variable and displayed. This value, expressing the number of packets per second, is used to measure the signal quality. The thresholds were determined experimentally based on the maximum observed number of packets per second.
+After every successful packet transmission, the counter variable \textit{'tx\_freq\_cnt'} is incremented. During the callback routine of a 1Hz timer, this value is copied into \textit{'tx\_freq'} variable and displayed. This value, expressing the number of packets per second, is used to measure the signal quality. Thresholds were determined experimentally based on the maximum observed number of packets per second.
 
 Since the detection of signal loss by the transmitter is not as important as in the case of a car and serves mainly for information purposes, the implementation is quite simple.
 
@@ -196,7 +200,7 @@ As STM32F303 does not support the SDIO interface, the SD card is connected via t
 
 I2C2 in Fast Mode Plus with a frequency of \SI{1}{\MHz} connects the OLED display. IMU unit is served by I2C1 in Fast Mode with a frequency of \SI{400}{\kHz}.
 
-1-Wire bus necessary to communicate with the DS18B20 temperature sensor is implemented using USART2 peripheral and DMA. The implementation is described in section *sec*. [\todo section]
+1-Wire bus necessary to communicate with the DS18B20 temperature sensor is implemented using USART2 peripheral and DMA. This method is described in \cite{1wire_uart}, and the DMA version was implemented with the help of \cite{1wire_uart_imp}. Since RX and TX pins are tied together, and TX pin is configured as push-pull, it is protected with a diode. This method is much simpler and requires fewer external components than the approach in \cite{1wire_uart} with a discrete open-drain buffer.
 
 SW1 and SW2 pins belong to the DIP switch and are configured in external interrupt mode with both rising and falling edge detection.
 
@@ -205,3 +209,104 @@ USART3 peripheral is configured as debug serial port. Baud rate is set to \SI{92
 LED pins are simple outputs. Pins PA11 and PA12 are not used in the project's current state but are reserved for a USB peripheral for possible future expansion with a control computer.
 
 Figure \ref{fig:car_conf} shows the complete pinout in STM32CubeMX.
+
+\subsection{Application start}
+The application for controlling the car is written similarly to the transmitter. The program starts with the initialization of all peripherals. Debug UART is enabled after start by default, too, and a blue LED on the BlackPill board indicates application initialization.
+
+First, the OLED display is initialized, and the project logo is displayed. At the same time and a greeting is sent via UART. If the Switch2 is turned on, IMU is initialized, and the flag controlling SD card logging is set. The next step is enabling servo and motor PWMs, initializing 1-Wire, and flashing individual channels of RGB LED.
+
+Automatic self-calibration of both ADCs follows, and the Vrefint calibration value is obtained from the appropriate register. This value is later used to calculate VDDA. Then the communication module is initialized in receiver mode with parameters defined in \textit{project\_tamiya.h}.
+
+After that, depending on the Switch2 position, the SD card is initialized and mounted. This process is explained in more detail in section *sec*.
+
+Lastly, all the timers are started in interrupt mode. Timer TIM15 controlling the display timeout is immediately stopped afterward. This is because the timer triggers an interrupt when started for the first time even though it is not supposed to, which interferes with the display timeout feature.
+
+Then the OLED display is turned off, UART is deinitialized depending on the Switch1 state, and the blue LED is turned off to indicate that initialization is done. The run time in milliseconds is stored just before entering the main control loop for possible later calculation of the data timestamp.
+
+\subsection{Main control loop}
+The following section describes the control loop. Similar to the transmitter control loop, it is designed to be as non-blocking and interrupt-driven as possible and consists of a set of 'if' blocks accordingly. The biggest bottleneck is the FatFs driver used for SD card logging, which is too complex to rewrite in DMA mode and takes the longest execution time. Individual "if" blocks are controlled by their appropriate flag.
+
+\begin{itemize}
+	\item \begin{description}
+\item[\textit{'NRF\_IRQ'}:]
+The flag is set by the communication module and indicates the module's status change. If the status represents newly received data, an ACK packet is first prepared and sent back to the transmitter to confirm successful reception. If the received data has the expected size, processing follows.
+
+Received values are checked against the defined chassis mechanical limits and clipped if they exceed the allowed range. After that, values are recalculated to pulse widths and set into PWM generating timers. Lastly, the safety timer is reset, and the command frequency counter is incremented. The flag is reset by the program at the end of the block.
+\end{description}
+
+	\item \begin{description}
+\item[\textit{'temp\_conv\_ready'}:]
+Although it may seem like the temperature sensor controls this flag, it is actually controlled by a \SI{1}{\Hz} timer. The temperature sensor datasheet states that temperature conversion with 12-bit resolution takes \SI{750}{\ms} and, therefore, one-second intervals are sufficient.
+
+Nevertheless, this section indicates that the temperature conversion is done, and the reading process can be started. If SD logging is enabled, it also flushes cached data to the SD card with the \textit{'f\_sync'} function.
+\end{description}
+
+	\item \begin{description}
+\item[\textit{'temp\_received'}:]
+This is the section controlled by the temperature sensor. The flag is set by a~\mbox{1-Wire} interrupt and indicates that the measured data transfer from the sensor has finished. Thus the raw register data is converted to the actual temperature. The process is mentioned in section \ref{sub:integers}.
+
+Lastly, the flag is reset, and the following temperature conversion is initialized.
+\end{description}
+
+	\item \begin{description}
+\item[\textit{'adc\_data\_bat\_rdy'} and \textit{'adc\_data\_sply\_rdy'}:]
+Appropriate ADC callback routines set flags. Both of them must be set to execute this block, which is responsible for processing data. First, measurements from both ADCs are averaged to obtain stable values. The VDDA calculation and conversion of values to the relevant physical quantities follows. Then if SD logging is enabled, data from IMU is read, and all the values are formatted and written to the SD card.
+
+At the end of the block, both flags are reset. A \SI{50}{\Hz} timer triggers ADCs themselves.
+\end{description}
+
+	\item \begin{description}
+\item[\textit{'log\_data'} and \textit{'unmount\_sd'}:]
+This block ensures safe unmount and disconnection of the SD card. The file is truncated, closed, and the SD card is unmounted. If Switch2 is turned on after the start of the application, the \textit{'log\_data'} flag is set. The \textit{'unmount\_sd'} flag is set if it is turned off during execution. Both flags are reset at the end of the block.
+\end{description}
+
+	\item \begin{description}
+\item[\textit{'display\_refresh'} and \textit{'display\_wakeup'}:]
+This section is responsible for refreshing the information on the OLED display if it is turned on. An interrupt routine of a \SI{4}{\Hz} timer sets the \textit{'display\_refresh'} flag, and the program resets it at the end of the block. The \textit{'display\_wakeup'} flag is set for 5 seconds by pressing the push-button under the display, which also activates it.
+\end{description}
+
+\end{itemize}
+
+
+\subsection{Integer arithmetics}
+\label{sub:integers}
+Although the selected MCU contains the FPU, all program variables are integers. The problem is not the speed of floating-point operations. Floating-point operations are fast thanks to the FPU and are used in some parts of the program, mainly during converting ADC value to actual voltage.
+
+The problem is that formatting floats for output is slow and, in addition, requires a special flag for the linker and increases the final file size considerably. Hence, float variables are multiplied by~1000 to maintain at least some accuracy and saved as an integer. This approach applies mainly to the accelerometer data. The battery voltage value is already calculated in millivolts to avoid float variables altogether.
+
+An easy "trick" is utilized to display the BLDC temperature as a decimal number without float variables. The raw register data is converted to the integer part of the temperature using bits 11 to 4, according to Figure 4 in \cite{ds_datasheet}. Then the program checks the value of bit 3 associated with $2^{-1} = \frac{1}{2}$\unit{\celsius} and sets another integer variable to 5 or 0 accordingly. Afterward, the temperature is displayed as two integers with a point between them.
+
+\subsection{Signal quality and loss detection}
+\label{sub:safety}
+It is expected from an RC vehicle that it safely stops or at least stops the motor in case of signal loss to prevent damage or injury. Since pulse width values controlling the servo and motor are only updated when a new control packet is received, loss of the signal would mean that the last command remains set in PWM generating timer and the car uncontrollably drives away.
+
+One of the timers is used as a 'safety timer' to solve this behavior. The timer is set to \SI{4}{\Hz} with interrupts enabled, and its counter is reset whenever a command packet is successfully received. If no new command is received within \SI{250}{\ms}, the timer triggers an interrupt, resetting the motor and servo to their "neutral" position and setting the \textit{'no\_signal'} flag. 
+
+Moreover, the associated interrupt callback routine is the only one that directly interferes with car control, which ensures the motor is always reset after exactly \SI{250}{\ms} independently of the current program state if no new command is received.
+
+Theoretically, one of the watchdogs could have been used instead of the timer as a more robust safety measure. However, not reloading it in time would mean restarting the MCU and interfering with SD card data logging.
+
+The signal quality indicator is implemented identically to the transmitter. Each time the packet is successfully received, a counter variable is incremented. The value of the counter variable is copied to another variable and reset every second by a \SI{1}{\Hz} timer. This value is used to estimate signal quality, which is then visualized on the OLED display.
+
+\subsection{SD logging}
+A micro SD card slot is ready to use to record driving data. The application implements ChaN's FatFs driver to interface the SD card, and therefore, any FAT-formatted micro SD card can be used. Driving data are saved with a frequency of \SI{50}{\Hz} in CSV file format.
+
+The logged data includes a timestamp, voltage and current measurements, BLDC temperature, actuator control values, and IMU data. The exact format and corresponding units of quantities are always specified in the first two lines of the CSV file.
+
+Data logging is enabled if Switch2 is turned on during the application start. Unlike UART prints, it cannot be enabled anytime. Depending on the Switch2 position, the SD card mounting and preparation procedure is performed right after communication module initialization.
+
+It starts with mounting the disk and printing SD card statistics. Then the application search for the "logs" folder, and if it is not found, it creates one. Afterward, the files in the folder are counted to determine the log number, and a new file is created.
+
+Then pre-allocation of \SI{10}{\mega\byte} of memory follows, which should suffice for approximately an \mbox{hour-long} log file. This step is critical as it dramatically decreases filesystem overhead when writing to the file. Without the pre-allocation, the \textit{'f\_sync'} function sometime took so long that the safety timer triggered and reset the motor.
+
+Every second, the log file is \textit{'f\_synced'} to lower its execution time and prevent data loss if an unexpected event happens, such as a shutdown. With this approach, the user should not lose more than the last second of data.
+
+Even though the pre-allocation reduced \textit{'f\_sync'} execution time significantly, it still sometimes takes more than \SI{100}{\ms}, meaning that some data are missing from the log.
+
+Switch2 must be turned off to finish data logging properly. After that, the file is truncated and closed, and the whole SD card is safely unmounted.
+
+\subsection{Status visualization}
+[\todo]
+
+\subsection{UART debug prints}
+[\todo]

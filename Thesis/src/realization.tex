@@ -80,7 +80,7 @@ The rest of the electronics is powered by \SI{3.3}{\V} regulated by BlackPill's 
 \subsection{Board design}
 The Control board for the car was created on the perfboard as it allowed for more flexibility in design and testing, and the space available in the car is quite ample. The Schematic was drawn in KiCad. The board looks more complex than the board in the transmitter due to the number of components and consists of necessary connectors, a BlackPill board, an OLED display, an SD card slot, and LEDs.
 
-The main BlackPill board is soldered directly to the perfboard to ensure rigidity. The OLED display and SD card slot were also soldered directly to the board under the BlackPill. Right under the display is a push-button used to wake it up, and to the right of the display, there is a 2-position DIP switch.
+The main BlackPill board is soldered directly to the perfboard to ensure rigidity. The OLED display and SD card slot were also soldered directly to the board under the BlackPill. Right under the display is a push-button used to wake it up. The UART debug pins are at the bottom left of the display, and to the right is a two-position DIP switch.
 
 Everything not soldered to the board is connected using JST XH connectors. At first, simple pin headers were used as connectors, but the cable was sometimes disconnected from the board since the car moves and generates vibrations. JST XH connectors feature a small locking mechanism to reduce the risk of disconnection and are therefore suitable.
 
