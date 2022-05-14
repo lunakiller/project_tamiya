@@ -13,7 +13,13 @@
 \subsection{Background}
 The whole project is built on an old entry-level onroad 1/10 chassis from the \textit{Tamiya Quick Drive} series released on Jul 16, 2003 \cite{tamiya}. The RC car was obtained as a childhood gift. It was pre-assembled and came with a 2-channel transmitter communicating at a frequency of \SI{27}{\MHz}. Later the servo broke, and no repair or upgrade parts were available. Since the repair was nearly impossible, but the rest of the chassis was fully functional, it was the perfect choice for a complete rebuild.
 
-The car featured a sealed gearbox, servo, "280" size brushed motor and \SI{9.6}{\V} Ni-Cd battery pack. Due to the age of the product, not much technical information can be found.
+The car featured a sealed gearbox, servo, "280" size brushed motor and \SI{9.6}{\V} Ni-Cd battery pack. Due to the age of the product, not much technical information can be found. Figure \ref{fig:tx_old_pcb} shows the old transmitter PCB.
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.5\linewidth]{fig/tx_pcb_old.jpg}
+\caption{Original transmitter PCB}
+\label{fig:tx_old_pcb}
+\end{figure}
 
 \subsection{Modifications}
 \label{sub:hw_mods}
@@ -35,7 +41,7 @@ A servomotor, or servo for short, is an actuator used for precise output shaft p
 \label{fig:servo_control}
 \end{figure}
 
-The servo used in the car is \textit{TowerPro} MG995. It has metal gears and operating voltage between \SI{4.8}{\V} to \SI{6.6}{\V}. Speed and torque depend on the supply voltage. According to the product specifications \cite{mg995}, the servo can achieve operating speed of $0.2\, \text{s}/60^\circ$ and torque of \SI{9.4}{\kg\per\cm} with the \SI{4.8}{\V} supply voltage. From the operating speed we can calculate angular velocity: 
+The servo used in the car is \textit{TowerPro} MG995. It has metal gears and operating voltage between \SI{4.8}{\V} to \SI{6.6}{\V}. Speed and torque depend on the supply voltage. According to the product specifications \cite{mg995}, the servo can achievea an operating speed of $0.2\, \text{s}/60^\circ$ and torque of \SI{9.4}{\kg\per\cm} with the \SI{4.8}{\V} supply voltage. From the operating speed we can calculate angular velocity: 
 \begin{equation}
 \omega = \frac{d \theta}{d t} = \frac{\frac{\pi}{3}}{0.2} \doteq 5.236\ \unit{\radian\per\second}\ ,
 \end{equation}
@@ -93,23 +99,49 @@ Whether the brake or reverse is activated depends on the actual motion of the mo
 Prototyping was mainly done on the breadboard using the \textit{RobotDyn's} BlackPill development board featuring STM32F303CCT6 microcontroller \cite{black_pill}. The board uses a similar size and form factor as the popular BluePill board equipped with STM32F103C8T6 \cite{blue_pill}. Both these boards were readily available.
 
 BlackPill was selected for its better processor based on an ARM M4 core with FPU, larger memories, and more advanced peripherals. Thus, it is more suitable for processing data from more sensors, especially when using floating point arithmetics. The board is shown in figure \ref{fig:black_pill}.
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.5\linewidth]{fig/placeholder.jpg}
-\caption{*PLACEHOLDER* RobotDyn BlackPill development board}
-\label{fig:black_pill}
-\end{figure}
+
+    \begin{figure}[t]
+    \centering
+    \begin{subfigure}{0.4\textwidth}
+    \centering
+        \includegraphics[width=1\textwidth]{fig/blackpill_front.jpg}
+		\caption{front side}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}{0.4\textwidth}
+    \centering
+		\includegraphics[width=1\textwidth]{fig/blackpill_back.jpg}
+		\caption{back side}
+    \end{subfigure}
+	\caption{RobotDyn BlackPill development board}
+    \label{fig:black_pill}
+    \end{figure}
+
+
+%\begin{figure}[t]
+%\centering
+%\includegraphics[width=0.5\linewidth]{fig/placeholder.jpg}
+%\caption{*PLACEHOLDER* RobotDyn BlackPill development board}
+%
+%\end{figure}
 
 
 \section{Communication}
 \label{sec:hw_comm}
-The project uses wireless modules equipped with nRF24L01+ transceiver chip from \textit{Nordic Semiconductor} [\todo citace], a power amplifier, a low-noise amplifier, and an external antenna. The chip operates in the worldwide \SI{2.4}{\GHz} ISM band and communicates with the MCU using the SPI bus. Configurable parameters include channel, data rate, and output power. These modules fit all the requirements, and in addition, they are cheap and readily available.
+The project uses wireless modules equipped with nRF24L01+ transceiver chip from \textit{Nordic Semiconductor}, a power amplifier, a low-noise amplifier, and an external antenna. The chip operates in the worldwide \SI{2.4}{\GHz} ISM band and communicates with the MCU using the SPI bus. Configurable parameters include channel, data rate, and output power. These modules fit all the requirements, and in addition, they are cheap and readily available.
 
-According to the product specification [\todo citace-Amazon?], the range should be more than \SI{800}{\m} line-of-sight. Thanks to the \textit{Enhanced ShockBurst protocol} and its Auto Acknowledgement function [\todo citace], attaching a small payload to the ACK packet is possible. This feature is advantageously used to report car status back to the transmitter.
+According to the product specification \cite{nrf_pa_lna}, the range should be more than \SI{800}{\m} line-of-sight. Thanks to the \textit{Enhanced ShockBurst protocol} and its Auto Acknowledgement function \cite{nrf_datasheet}, attaching a small payload to the ACK packet is possible. This feature is advantageously used to report car status back to the transmitter.
 
 An additional adapter board is utilized to supply voltage to the nRF24 module. It has the same pinout and includes a voltage regulator with all needed external components. The Adapter board is powered with \SI{5}{\V}, which are then regulated to \SI{3.3}{\V}. This setup ensures a stable power supply for the nRF24 module.
 
-As the adapter board is only equipped with a pin socket for connection, which is unsuitable for use in vibration generating environments, it was removed. The nRF24 module was instead soldered directly to the adapter, as were the wires. The entire communication module is thus more robust and takes up less space.
+As the adapter board is only equipped with a pin socket for connection, which is unsuitable for use in vibration generating environments, it was removed. The nRF24 module was instead soldered directly to the adapter, as were the wires. The entire communication module is thus more robust and takes up less space. Figure \ref{fig:unmod_nrf} shows the unmodified communication module with the adapter board.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.6\linewidth]{fig/nrf_pa_lna.jpg}
+\caption{Unmodified nRF24 module with adapter}
+\label{fig:unmod_nrf}
+\end{figure}
 
 
 \section{Sensors}
@@ -128,12 +160,24 @@ Current sense terminals are electrically isolated from the rest of the sensor; t
 \subsection{Temperature}	%TODO obrazek?
 A digital thermometer DS18B20 provides temperature measurement. The sensor is manufactured by \textit{Dallas Semiconductor}, which \textit{Maxim Integrated} later acquired. It can measure temperatures from \SI{-55}{\degreeCelsius} to \SI{125}{\degreeCelsius}. It has a programmable resolution ranging from 9 to 12 bit and $\pm$\SI{0.5}{\degreeCelsius} over most of the measuring range. The sensor uses a 1-Wire interface, which requires only one pin for communication. When combined with parasitic power mode, the whole thermometer requires only two pins for operation \cite{ds_datasheet}.
 
-The project uses the TO-92 package, which was advantageous because of the limited space around the BLDC. The small size made it possible to mount the sensor on the back of the motor housing with the aid of heat-conducting foil. [\todo image?]
+The project uses the TO-92 package, which was advantageous because of the limited space around the BLDC. The small size made it possible to mount the sensor on the back of the motor housing with the aid of heat-conducting foil. The sensor is in figure \ref{fig:ds18b20}.
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.35\linewidth]{fig/ds18b20.jpg}
+\caption{DS18B20 temperature sensor \cite{ds_pic}}
+\label{fig:ds18b20}
+\end{figure}
 
 \subsection{IMU}			%TODO obrazek?
-For motion measurements, a module with MPU6050 from \textit{InvenSense} was selected as it was the cheapest option. The sensor packs a 3-axis accelerometer, which provides linear acceleration data, and a 3-axis gyroscope, which provides angular velocity data, in one chip. Both the accelerometer and gyroscope have programmable measurement ranges. Communication with the sensor is performed using the I\textsuperscript{2}C bus. An external 3-axis magnetometer can be attached straight to the sensor, extending the sensor's capability \cite{mpu_datasheet}.
+For motion measurements, a module with MPU6050 from \textit{InvenSense} was selected as it was the cheapest option. The module is in figure \ref{fig:mpu}. The sensor packs a 3-axis accelerometer, which provides linear acceleration data, and a 3-axis gyroscope, which provides angular velocity data, in one chip. Both the accelerometer and gyroscope have programmable measurement ranges. Communication with the sensor is performed using the I\textsuperscript{2}C bus. An external 3-axis magnetometer can be attached straight to the sensor, extending the sensor's capability \cite{mpu_datasheet}.
 
-The sensor claims it has a DMP (Digital Motion Processor) capable of merging the accelerometer and gyroscope data on-chip. Sadly, this feature is undocumented and available only when using \textit{InvenSense's} official \textit{Embedded MotionApps software}. Another possibility would be using \textit{I\textsuperscript{2}Cdevlib}, where the DMP functionality was reverse-engineered \cite{i2cdevlib}. However, the \textit{I\textsuperscript{2}Cdevlib} is written for Arduino and would require porting the code to the STM32 with uncertain results. Therefore only raw accelerometer and gyroscope data are used. [\todo image?]
+The sensor claims it has a DMP (Digital Motion Processor) capable of merging the accelerometer and gyroscope data on-chip. Sadly, this feature is undocumented and available only when using \textit{InvenSense's} official \textit{Embedded MotionApps software}. Another possibility would be using \textit{I\textsuperscript{2}Cdevlib}, where the DMP functionality was reverse-engineered \cite{i2cdevlib}. However, the \textit{I\textsuperscript{2}Cdevlib} is written for Arduino and would require porting the code to the STM32 with uncertain results. Therefore only raw accelerometer and gyroscope data are used.
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.35\linewidth]{fig/mpu6050.jpg}
+\caption{MPU6050 IMU module \cite{mpu_pic}}
+\label{fig:mpu}
+\end{figure}
 
 \section{Status info}
 \label{sec:hw_status}
@@ -145,7 +189,7 @@ For this reason, the display seemed like a good alternative and replacement. An 
 
 Considering all the factors, both the RGB LED and the OLED display were used. RGB LED serves as a fast state notifier, and further status information can be found on the display.
 
-Both car and transmitter use RGB LED with a common anode and monochrome OLED display module with SSD1306 chip communicating using I\textsuperscript{2}C bus [\todo citace].
+Both car and transmitter use RGB LED with a common anode and monochrome OLED display module with SSD1306 chip communicating using I\textsuperscript{2}C bus. %TODO citace?
 
 
 %\begin{table}[t]

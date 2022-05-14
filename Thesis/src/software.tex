@@ -5,7 +5,7 @@
 \part{Software}
 \label{chap:software}
 \section{Introduction}
-The control program for both the transmitter and the car is written in C language. It utilizes the STM32 HAL (Hardware Abstraction Layer) libraries, and the STM32CubeMX graphical utility was used to set up the necessary initialization and project files and generate code for peripheral configuration.
+The control program for both the transmitter and the car is written in C language. It utilizes the STM32 HAL (Hardware Abstraction Layer) libraries, and the STM32CubeMX graphical utility was used to set up the necessary initialization and project files and generate code for peripheral configuration. Afterward, the application is compiled using a Makefile under Linux by the GNU GCC cross-compiler for ARM bare-metal targets.
 
 STM32 HAL driver library provides a set of APIs to simplify interaction with all the peripherals and thus the user application implementation. The HAL driver layer implements run-time failure detection to increase robustness. HAL APIs are available for all peripherals. Also, the API ensures high portability across different STM32 families \cite{hal}.
 
@@ -14,10 +14,92 @@ STM32CubeMX is a graphical tool that provides a convenient user interface to con
 The control program is almost exclusively interrupt-driven. Emphasis has been placed on program execution speed to ensure a high frequency of control commands and, therefore, smooth car control.
 
 \section{File structure}
-\todo
+Software for both the transmitter and car is in their respective folders. STM32CubeMX generated the code, and to maintain compatibility, the dedicated user code sections were used. The code was generated with CubeMX's basic application structure setting.
+
+Therefore both project folders in the \textit{'Software'} folder contain the \textit{'Drivers'} folder with ARM and HAL drivers for the board, the \textit{'Inc'} folder with header files, and the \textit{'Src'} folder with source files. The startup file, makefile, linker script, and CubeMX project file are in the root folder. As the car implements FatFs driver, it is located mainly in the \textit{'Middlewares'} folder.
+
+The \textit{'shared\_libs'} folder contains shared libraries for both applications, namely the nRF24 module and OLED display libraries, and follows the same file structure; the \textit{'Inc'} folder contains header files and the \textit{'Src'} folder source files. Icons used on the OLED display are in the dedicated \textit{'logos'} folder inside the \textit{'Inc'} folder.
+
+In addition, there are three important files:
+\begin{itemize}
+	\item \begin{description}
+\item[\textit{'project\_tamiya.h'}:]
+Shared header located in the \textit{'shared\_libs/Inc'} folder. It contains common libraries and \textit{'platform.h'} file. More importantly, it contains nRF24 communication settings, various macros, and shared function declarations, namely nRF24 and OLED wrapper functions and functions used for UART debug prints.
+\end{description}
+
+	\item \begin{description}
+\item[\textit{'project\_tamiya.c'}:]
+Source file located in the \textit{'shared\_libs/Src'} folder. It consists of function definitions from the appropriate header file.
+\end{description}
+
+	\item \begin{description}
+\item[\textit{'platform.h'}:]
+This header file is in both applications' \textit{'Inc'} folder, contains platform-specific macros and settings, and includes platform-specific headers.
+\end{description}
+\end{itemize}
+The visualization of the file structure with highlighted important files is below.
+
+\begin{forest}
+  pic dir tree,
+  pic root,
+  for tree={% folder icons by default; override using file for file icons
+    directory,
+  },
+  [Software
+    [Car, label=right:Main folder of the car control application
+    		[Inc
+    			[platform.h, file
+    			]
+    		]
+    ]
+    [shared\_libs, label=right:Shared libraries for both applications
+    		[Inc
+    			[project\_tamiya.h, file
+    			]
+    		]
+    		[Src
+    			[project\_tamiya.c, file
+    			]
+    		]
+    ]
+    [Transmitter, label=right:Main folder of the transmitter control application
+    		[Inc
+    			[platform.h, file
+    			]
+    		]
+    ]
+  ]
+\end{forest}
 
 \subsection{Communication parameters}
-\todo
+Since the communication parameters must be equal in both the car and transmitter to establish the connection, they are placed in the shared \textit{'project\_tamiya.h'} header file.
+
+The control packet payload size is only 4 bytes, and the ACK packet payload is only 3 bytes. In addition, 1 byte CRC is used. Payloads are described in figures \ref{tab:ctrl_payload} and \ref{tab:ack_payload}. CRC and other fields of the \textit{Enhanced ShockBurst} packet are not displayed.
+
+\begin{figure}[ht]
+\centering
+	\begin{bytefield}[bitwidth=1.2em, bitheight=2em]{32}
+        \bitheader{0, 8, 16, 24, 32} \\
+        \bitbox{16}{Throttle} & \bitbox{16}{Steering}
+    \end{bytefield}
+    \caption{Control payload format}
+    \label{tab:ctrl_payload}
+\end{figure}
+	
+\begin{figure}[ht]
+\centering
+	\begin{bytefield}[bitwidth=1.5em, bitheight=\widthof{~\small$\frac{1}{2}$\unit{\celsius}~}]{24}
+        \bitheader{0, 8, 16, 17, 24} \\
+        \begin{rightwordgroup}{RTP \\  Header}
+        \bitbox{16}{Battery voltage} & \bitbox{1}{\rotatebox{90}{\small$\frac{1}{2}$\unit{\celsius}}} & \bitbox{7}{Integer temperature}
+    \end{bytefield}
+    \caption{ACK payload format}
+    \label{tab:ack_payload}
+\end{figure}
+\noindent
+Bit 16 of the ACK payload is related to the trick described in \ref{sub:integers}.
+
+The channel frequency is set to \SI{2515}{\MHz} to reduce interferences with the wi-fi signal, and the data rate is the lowest possible \SI{250}{\kilo\bit\per\second}. According to \cite{nrf_datasheet}, a lower air data rate gives better receiver sensitivity than a higher air data rate. Transmitting power is, on the other hand, the highest possible. This setup ensures the most extended potential range.
 
 
 \section{Transmitter}
@@ -158,9 +240,25 @@ The first in the upper part of the display resembles a status bar and provides i
 
 The rest of the screen is separated by a line and belongs to the transmitter status. Information about the current position of control potentiometers is displayed in the middle, along with the trim values. The position of potentiometers is not expressed relatively in percentage. Instead, the actual value sent to the car is displayed. The bottom part offers information about packets per second and the transmitter's battery status.
 
-Both battery indicators are interactive and, depending on the voltage, up to 4 bars are displayed. If the battery voltage drops below the threshold of \SI{6.8}{\V}, a flashing exclamation mark is displayed in the battery logo instead. The signal quality indicator is also interactive. [\todo fotka]
+Both battery indicators are interactive and, depending on the voltage, up to 4 bars are displayed. If the battery voltage drops below the threshold of \SI{6.8}{\V}, a flashing exclamation mark is displayed in the battery logo instead. The signal quality indicator is also interactive.
 
-All logos were created in GIMP and exported as XBM files. These were later "converted" to header files by changing the file extension.
+All logos were created in GIMP and exported as XBM files. These were later "converted" to header files by changing the file extension. Examples of the display interface are in figure \ref{fig:tx_oled}.
+\begin{figure}[t]
+    \centering
+    \begin{subfigure}{0.4\textwidth}
+    \centering
+        \includegraphics[width=1\textwidth]{fig/tx_oled_ok.jpg}
+%		\caption{front side}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}{0.4\textwidth}
+    \centering
+		\includegraphics[width=1\textwidth]{fig/tx_oled_nosig.jpg}
+%		\caption{back side}
+    \end{subfigure}
+	\caption{OLED display interface in transmitter}
+    \label{fig:tx_oled}
+\end{figure}
 
 \subsection{UART debug prints}
 One of the UARTs is utilized for printing debug information. Corresponding pins are available on the connector J3; configuration is in section \ref{sub:tx_conf}.
@@ -180,6 +278,7 @@ Debug printing can be enabled or disabled anytime during the application executi
 
 \section{Car}
 \subsection{Peripherals and pin configuration}
+\label{sub:car_conf}
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.75\linewidth]{fig/car_pin_assignments.png}
@@ -297,7 +396,7 @@ Data logging is enabled if Switch2 is turned on during the application start. Un
 
 It starts with mounting the disk and printing SD card statistics. Then the application search for the "logs" folder, and if it is not found, it creates one. Afterward, the files in the folder are counted to determine the log number, and a new file is created.
 
-Then pre-allocation of \SI{10}{\mega\byte} of memory follows, which should suffice for approximately an \mbox{hour-long} log file. This step is critical as it dramatically decreases filesystem overhead when writing to the file. Without the pre-allocation, the \textit{'f\_sync'} function sometime took so long that the safety timer triggered and reset the motor.
+Then pre-allocation of \SI{10}{\mebi\byte} of memory follows, which should suffice for approximately an \mbox{hour-long} log file. This step is critical as it dramatically decreases filesystem overhead when writing to the file. Without the pre-allocation, the \textit{'f\_sync'} function sometime took so long that the safety timer triggered and reset the motor.
 
 Every second, the log file is \textit{'f\_synced'} to lower its execution time and prevent data loss if an unexpected event happens, such as a shutdown. With this approach, the user should not lose more than the last second of data.
 
@@ -306,7 +405,41 @@ Even though the pre-allocation reduced \textit{'f\_sync'} execution time signifi
 Switch2 must be turned off to finish data logging properly. After that, the file is truncated and closed, and the whole SD card is safely unmounted.
 
 \subsection{Status visualization}
-[\todo]
+Visualization of the status is consistent with the transmitter and utilizes the RGB LED and a bit smaller OLED display. Again, the RGB LED serves as a quick notification of the communication and the car's battery status. In the case of body shell mounting, it is also visible through it and is the only status indicator. The color scheme is the same as in the transmitter, and thus, the same table \ref{tab:led_status} applies.
+
+Since the car is usually driven with a body shell mounted, the display is not visible to the user as it is under the body on the control board. For this reason, the display is turned off the majority of the time. It is activated only during the start of the application to display the project logo. The display can be turned on anytime by pressing the push-button under the display, waking it up for 5 seconds.
+
+The display interface is much more plain than the one in the transmitter. 
+Due to the size of the display, the only information presented is the battery voltage, motor temperature, and signal quality indicator with packets per second. Both battery and signal indicators are interactive again.
+
+The signal loss is visualized only by the RGB LED and the zero frequency of the commands on the OLED display; no dedicated error message is shown. Examples of the display interface are in figure \ref{fig:car_oled}.
+\begin{figure}[t]
+    \centering
+    \begin{subfigure}{0.4\textwidth}
+    \centering
+        \includegraphics[width=1\textwidth]{fig/car_oled_ok.jpg}
+%		\caption{front side}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}{0.4\textwidth}
+    \centering
+		\includegraphics[width=1\textwidth]{fig/car_oled_nosig.jpg}
+%		\caption{back side}
+    \end{subfigure}
+	\caption{OLED display interface in car}
+    \label{fig:car_oled}
+\end{figure}
 
 \subsection{UART debug prints}
-[\todo]
+One of the UARTs is reserved for printing debug information. Corresponding pins are available on the pin header under the display; configuration is in section \ref{sub:car_conf}. The behavior is the same as in the transmitter.
+
+The printing is enabled by default after the application start and prints the initialization progress. Afterward, the printing is dependent on the state of the Switch1.
+
+The UART is deinitialized before entering the main control loop if the switch is in the off position or stays initialized otherwise. If debug prints are enabled, the car informs about:
+\begin{itemize}
+\item LiPo battery voltage and current, VDDA voltage, 5V supply voltage, and BLDC temperature whenever new data is available,
+\item file sync, save, write error if SD logging is enabled,
+\item switch position changes and push-button presses,
+\item no signal state.
+\end{itemize}
+Debug printing can be enabled or disabled anytime during the application execution.
