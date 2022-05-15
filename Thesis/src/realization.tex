@@ -56,7 +56,7 @@ As stated in section \ref{sec:hw_control}, the prototyping was done using a Blac
 
 First, the original PCB was measured so that the new PCB could be designed according to these dimensions. A minor modification was done; the new PCB has a cutout on the top to fit the nRF24 communication module.
 
-The communication module and control potentiometers are directly soldered to the board. In contrast, the power supply is connected via the JST XH connector, and rotary encoders are connected via simple pin sockets shown in figure *fig*. [\todo fotka]
+The communication module and control potentiometers are directly soldered to the board. In contrast, the power supply is connected via the JST XH connector, and rotary encoders are connected via simple pin sockets visible in figure \ref{fig:tx_assembly}.
 
 Microcontroller circuitry was designed according to Section 7 of \cite{f3_design_an}. Four \SI{100}{\nF} ceramic decoupling capacitors were placed as close to the microcontroller as possible. Since the VBAT pin is not utilized, it was connected to the supply voltage (VDD) via another \SI{100}{\nF} ceramic capacitor. A bigger \SI{4.7}{\uF} decoupling capacitor is placed on the main supply line close to the microcontroller.
 
@@ -83,18 +83,18 @@ and therefore the external load capacitance should be \SI{26}{\pF}. As this is a
 The RGB LED resistor values were chosen experimentally to achieve similar luminosity of all channels as no datasheet is available. If all channels are active, the total current through the LED does not exceed the assumed maximal \SI{20}{\mA}.
     \begin{figure}[ht]
     \centering
-    \begin{subfigure}{0.35\textwidth}
+    \begin{subfigure}{0.4\textwidth}
     \centering
         \includegraphics[width=1\textwidth]{fig/tx_inside.jpg}
 		\caption{inside view}
     \end{subfigure}%
     \hspace{1cm}
-    \begin{subfigure}{0.35\textwidth}
+    \begin{subfigure}{0.4\textwidth}
     \centering
 		\includegraphics[width=1\textwidth]{fig/tx_assembled.jpg}
 		\caption{front side}
     \end{subfigure}
-	\caption{PCB for transmitter}
+	\caption{Assembled transmitter}
     \label{fig:tx_assembly}
     \end{figure}
 
