@@ -13,7 +13,7 @@
   *                       - white:  error (Error_Handler())
   *                     - safety timer (250ms no command -> car stops)
   *                     - battery voltage measurements (calibrated)
-  *                     - current measurements (needs calibration)
+  *                     - current measurements (calibrated?)
   *                     - gyro/accel measurements
   *                     - BLDC temperature measurements
   *                     - UART debug prints controlled by Switch1
@@ -21,11 +21,9 @@
   *                     - OLED display with batt voltage, bldc temp and msgs/sec
   *                       - controlled by button
   * 
-  *                   TODO:
-  *                     - calibrate current sensor (VBAT voltage?)
   *                     
   * @author         : Kristian Slehofer
-  * @date           : 9. 5. 2022
+  * @date           : 16. 5. 2022
   ******************************************************************************
   * @attention
   *
@@ -506,7 +504,7 @@ int main(void)
       voltage = voltage * vdda / 4095;                                          // calculate the actual battery voltage
       voltage *= BAT_DIVIDER;
       current = current * vdda / 4095;                                          // calculate current
-      current = ((supply5 / 2.0) - current) * 1000 / 66.0;                      // 66 mV/A from datasheet
+      current = (((supply5 / 2.0) - current) * 1000 / 113.52) - 409.3;          // 66 mV/A from datasheet * 1.72 correction - 704/1.72 offset
       
       if(log_data) {
         MPU6050_ReadAll(&mpu);                                                  // get MPU data
