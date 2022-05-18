@@ -23,7 +23,7 @@
   * 
   *                     
   * @author         : Kristian Slehofer
-  * @date           : 16. 5. 2022
+  * @date           : 18. 5. 2022
   ******************************************************************************
   * @attention
   *
@@ -504,7 +504,8 @@ int main(void)
       voltage = voltage * vdda / 4095;                                          // calculate the actual battery voltage
       voltage *= BAT_DIVIDER;
       current = current * vdda / 4095;                                          // calculate current
-      current = (((supply5 / 2.0) - current) * 1000 / 113.52) - 409.3;          // 66 mV/A from datasheet * 1.72 correction - 704/1.72 offset
+      current = (((supply5 / 2.0) - current) * 1000 / 27.06) - 721.95;          // 66 mV/A from datasheet * 0.41 correction - 296/0.41 offset
+      // current = ((supply5 / 2.0) - current) * 1000 / 66.0;                   // 66 mV/A from datasheet
       
       if(log_data) {
         MPU6050_ReadAll(&mpu);                                                  // get MPU data
