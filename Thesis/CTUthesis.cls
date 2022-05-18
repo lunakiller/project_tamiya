@@ -131,9 +131,9 @@
         
         %% header settings %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         \renewcommand{\headrulewidth}{0pt}
-        \fancyhead[RO]{\color{CTUblue} \slshape \rightmark }
+        \fancyhead[RO]{\color{CTUblue} \slshape \nouppercase{\leftmark} }
 	    \fancyhead[RE]{}
-    	\fancyhead[LE]{\color{CTUblue} \slshape \rightmark }
+    	\fancyhead[LE]{\color{CTUblue} \slshape \nouppercase{\leftmark} }
 	    \fancyhead[LO]{}
     }
     %% definition of pagestyle with part heading - no header text %%%%%%%%%%%
@@ -258,7 +258,7 @@
   \fi
   \@xsect{#5}
   %% add section name to be displayed in the header %%%%%%%%%%%%%%%
-  \markboth{\thesection\,#7}{\thesection\,#7}
+%  \markboth{\thesection\,#7}{\thesection\,#7}
   }
 \makeatother
 

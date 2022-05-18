@@ -105,12 +105,13 @@ The channel frequency is set to \SI{2515}{\MHz} to reduce interferences with the
 \section{Transmitter}
 \subsection{Peripherals and pin configuration}
 \label{sub:tx_conf}
-\begin{figure}[t]
+\begin{figure}[h]
 \centering
 \includegraphics[width=0.7\linewidth]{fig/tx_pin_assignments.png}
 \caption{Transmitter pin assignments}
 \label{fig:tx_conf}
 \end{figure}
+\noindent
 The microcontroller runs at \SI{72}{\MHz} with a clock source set to a \SI{12}{\MHz} external crystal oscillator.
 
 ADC1 channels 1 and 2 are used to measure the output voltage from control potentiometers. ADC operates with 12-bit resolution in continuous conversion mode with DMA enabled in circular mode with continuous requests to manipulate the data. Once the ADC conversion is started, it remains active, and DMA repeatedly fills the buffer with measured data. Sampling time is the highest possible 601.5 cycles, and software averaging is used to acquire stable measurements.
@@ -242,16 +243,16 @@ The rest of the screen is separated by a line and belongs to the transmitter sta
 
 Both battery indicators are interactive and, depending on the voltage, up to 4 bars are displayed. If the battery voltage drops below the threshold of \SI{6.8}{\V}, a flashing exclamation mark is displayed in the battery logo instead. The signal quality indicator is also interactive.
 
-All logos were created in GIMP and exported as XBM files. These were later "converted" to header files by changing the file extension. Examples of the display interface are in figure \ref{fig:tx_oled}.
+All logos were created in GIMP and exported as XBM files. These were later 'converted' to header files by changing the file extension. Examples of the display interface are in figure \ref{fig:tx_oled}.
 \begin{figure}[t]
     \centering
-    \begin{subfigure}{0.4\textwidth}
+    \begin{subfigure}{0.35\textwidth}
     \centering
         \includegraphics[width=1\textwidth]{fig/tx_oled_ok.jpg}
 %		\caption{front side}
     \end{subfigure}%
     \hspace{1cm}
-    \begin{subfigure}{0.4\textwidth}
+    \begin{subfigure}{0.35\textwidth}
     \centering
 		\includegraphics[width=1\textwidth]{fig/tx_oled_nosig.jpg}
 %		\caption{back side}
@@ -279,7 +280,7 @@ Debug printing can be enabled or disabled anytime during the application executi
 \section{Car}
 \subsection{Peripherals and pin configuration}
 \label{sub:car_conf}
-\begin{figure}[t]
+\begin{figure}[h]
 \centering
 \includegraphics[width=0.75\linewidth]{fig/car_pin_assignments.png}
 \caption{Car pin assignments}
@@ -291,7 +292,7 @@ Channels 2 and 3 of timer TIM8 are used to generate PWM and therefore control th
 
 ADC1 channels 1 and 2 are used to measure the LiPo battery voltage and output voltage from the current sensor. ADC operates with 12-bit resolution in continuous conversion mode with DMA enabled. Sampling time is again the highest possible $601.5$ cycles to acquire stable measurements.
 
-ADC2 measures the Vrefint channel to obtain the internal reference voltage and channel 12 to obtain the BEC output voltage. The resolution is also 12-bit, and continuous conversion mode with DMA is enabled. The sampling time for channel Vrefint is $181.5$ cycles and $601.5$ cycles for channel 12.
+ADC2 measures the Vrefint channel to obtain the internal reference voltage and channel 12 to obtain the BEC output voltage. The resolution is also 12-bit, and continuous conversion mode with DMA is enabled. The sampling time for channel Vrefint is $181.5$ cycles and $601.5$ cycles for channel~12.
 
 The communication module is connected to the SPI1 bus operating in full-duplex master mode. Baud rate is set to \SI{9}{\mega\bit\per\second}, and the data size is standard 8 bits. 'NRF\_IRQ' pin is configured in external interrupt mode with rising edge detection. The rest of the 'NRF' pins are simple outputs.
 
@@ -316,14 +317,14 @@ First, the OLED display is initialized, and the project logo is displayed. At th
 
 Automatic self-calibration of both ADCs follows, and the Vrefint calibration value is obtained from the appropriate register. This value is later used to calculate VDDA. Then the communication module is initialized in receiver mode with parameters defined in \textit{project\_tamiya.h}.
 
-After that, depending on the Switch2 position, the SD card is initialized and mounted. This process is explained in more detail in section *sec*.
+After that, depending on the Switch2 position, the SD card is initialized and mounted. This process is explained in more detail in section \ref{sub:sd_log}.
 
 Lastly, all the timers are started in interrupt mode. Timer TIM15 controlling the display timeout is immediately stopped afterward. This is because the timer triggers an interrupt when started for the first time even though it is not supposed to, which interferes with the display timeout feature.
 
 Then the OLED display is turned off, UART is deinitialized depending on the Switch1 state, and the blue LED is turned off to indicate that initialization is done. The run time in milliseconds is stored just before entering the main control loop for possible later calculation of the data timestamp.
 
 \subsection{Main control loop}
-The following section describes the control loop. Similar to the transmitter control loop, it is designed to be as non-blocking and interrupt-driven as possible and consists of a set of 'if' blocks accordingly. The biggest bottleneck is the FatFs driver used for SD card logging, which is too complex to rewrite in DMA mode and takes the longest execution time. Individual "if" blocks are controlled by their appropriate flag.
+The following section describes the control loop. Similar to the transmitter control loop, it is designed to be as non-blocking and interrupt-driven as possible and consists of a set of 'if' blocks accordingly. The biggest bottleneck is the FatFs driver used for SD card logging, which is too complex to rewrite in DMA mode and takes the longest execution time. Individual 'if' blocks are controlled by their appropriate flag.
 
 \begin{itemize}
 	\item \begin{description}
@@ -373,13 +374,13 @@ Although the selected MCU contains the FPU, all program variables are integers. 
 
 The problem is that formatting floats for output is slow and, in addition, requires a special flag for the linker and increases the final file size considerably. Hence, float variables are multiplied by~1000 to maintain at least some accuracy and saved as an integer. This approach applies mainly to the accelerometer data. The battery voltage value is already calculated in millivolts to avoid float variables altogether.
 
-An easy "trick" is utilized to display the BLDC temperature as a decimal number without float variables. The raw register data is converted to the integer part of the temperature using bits 11 to 4, according to Figure 4 in \cite{ds_datasheet}. Then the program checks the value of bit 3 associated with $2^{-1} = \frac{1}{2}$\unit{\celsius} and sets another integer variable to 5 or 0 accordingly. Afterward, the temperature is displayed as two integers with a point between them.
+An easy 'trick' is utilized to display the BLDC temperature as a decimal number without float variables. The raw register data is converted to the integer part of the temperature using bits 11 to 4, according to Figure 4 in \cite{ds_datasheet}. Then the program checks the value of bit 3 associated with $2^{-1} = \frac{1}{2}$\unit{\celsius} and sets another integer variable to 5 or 0 accordingly. Afterward, the temperature is displayed as two integers with a point between them.
 
 \subsection{Signal quality and loss detection}
 \label{sub:safety}
 It is expected from an RC vehicle that it safely stops or at least stops the motor in case of signal loss to prevent damage or injury. Since pulse width values controlling the servo and motor are only updated when a new control packet is received, loss of the signal would mean that the last command remains set in PWM generating timer and the car uncontrollably drives away.
 
-One of the timers is used as a 'safety timer' to solve this behavior. The timer is set to \SI{4}{\Hz} with interrupts enabled, and its counter is reset whenever a command packet is successfully received. If no new command is received within \SI{250}{\ms}, the timer triggers an interrupt, resetting the motor and servo to their "neutral" position and setting the \textit{'no\_signal'} flag. 
+One of the timers is used as a 'safety timer' to solve this behavior. The timer is set to \SI{4}{\Hz} with interrupts enabled, and its counter is reset whenever a command packet is successfully received. If no new command is received within \SI{250}{\ms}, the timer triggers an interrupt, resetting the motor and servo to their 'neutral' position and setting the \textit{'no\_signal'} flag. 
 
 Moreover, the associated interrupt callback routine is the only one that directly interferes with car control, which ensures the motor is always reset after exactly \SI{250}{\ms} independently of the current program state if no new command is received.
 
@@ -388,13 +389,14 @@ Theoretically, one of the watchdogs could have been used instead of the timer as
 The signal quality indicator is implemented identically to the transmitter. Each time the packet is successfully received, a counter variable is incremented. The value of the counter variable is copied to another variable and reset every second by a \SI{1}{\Hz} timer. This value is used to estimate signal quality, which is then visualized on the OLED display.
 
 \subsection{SD logging}
+\label{sub:sd_log}
 A micro SD card slot is ready to use to record driving data. The application implements ChaN's FatFs driver to interface the SD card, and therefore, any FAT-formatted micro SD card can be used. Driving data are saved with a frequency of \SI{50}{\Hz} in CSV file format.
 
 The logged data includes a timestamp, voltage and current measurements, BLDC temperature, actuator control values, and IMU data. The exact format and corresponding units of quantities are always specified in the first two lines of the CSV file.
 
 Data logging is enabled if Switch2 is turned on during the application start. Unlike UART prints, it cannot be enabled anytime. Depending on the Switch2 position, the SD card mounting and preparation procedure is performed right after communication module initialization.
 
-It starts with mounting the disk and printing SD card statistics. Then the application search for the "logs" folder, and if it is not found, it creates one. Afterward, the files in the folder are counted to determine the log number, and a new file is created.
+It starts with mounting the disk and printing SD card statistics. Then the application search for the 'logs' folder, and if it is not found, it creates one. Afterward, the files in the folder are counted to determine the log number, and a new file is created.
 
 Then pre-allocation of \SI{10}{\mebi\byte} of memory follows, which should suffice for approximately an \mbox{hour-long} log file. This step is critical as it dramatically decreases filesystem overhead when writing to the file. Without the pre-allocation, the \textit{'f\_sync'} function sometime took so long that the safety timer triggered and reset the motor.
 

@@ -46,6 +46,7 @@
 \usepackage{siunitx}	
 	\DeclareSIUnit{\Kv}{Kv}
 \usepackage{bytefield}
+\usepackage[square,numbers]{natbib}
 
 \usepackage[edges]{forest} % for directory tree, https://tex.stackexchange.com/questions/328886/making-a-directory-tree-of-folders-and-files/328987#328987, https://tex.stackexchange.com/questions/405192/how-to-insert-folder-icon-in-root-node-with-forest-package/405253#405253
 \definecolor{folderbg}{RGB}{124,166,198}
@@ -137,7 +138,8 @@
 %\setboolean{@twoside}{false}
 
 %% thesis assignment %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\includepdf[pages=-, offset=+10 0]{task.pdf}
+\newpage\null\thispagestyle{empty}\newpage\addtocounter{page}{-1}
+\includepdf[pages=-, offset=+11 0]{src/Thesis_Assignment.pdf}
 
 \begin{document_head}
 %% declaration, acknowledgement, abstract %%%%%%%%%%%%%%%
@@ -173,6 +175,7 @@
 \begin{document_body}
   	\input{src/introduction.tex}
 	\clearpage
+%	\newpage\null\thispagestyle{empty}\newpage\addtocounter{page}{-1}
 	\input{src/stm32.tex}
 	\clearpage
 	\input{src/hw.tex}
@@ -190,7 +193,7 @@
 %% References
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     \bibliography{main}
-    \bibliographystyle{unsrt} %use either 'unsrt', 'IEEEtran' or 'named'
+    \bibliographystyle{unsrtnat} %use either 'unsrt', 'IEEEtran' or 'named'
     \clearpage
 \end{document_body}
  

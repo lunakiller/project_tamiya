@@ -45,27 +45,27 @@ Cortex-M33F & L5, U5 \\
 \label{sec:stm_arm_division}
 	\subsection{Cortex-M3}
 	\label{sub:stm_m3}
-Cortex-M3 was the first processor in the Cortex-M generation and the first core used in the STM32 family in the STM32F1 series of microcontrollers. ARM first released this high-performance processor based on ARMv7-M architecture in 2005. It features modified Harvard architecture (with unified memory space) and a 3-stage pipeline. Thanks to 32-bit addressing, 4GB of memory space is supported.
+Cortex-M3 was the first processor in the Cortex-M generation and the first core used in the STM32 family in the STM32F1 series of microcontrollers. ARM first released this high-performance processor based on ARMv7-M architecture in 2005. It features modified Harvard architecture (with unified memory space) and a 3-stage pipeline. Thanks to 32-bit addressing, 4GB of memory space is supported \cite{yu}.
 	
 	\subsection{Cortex-M4F}
 	\label{sub:stm_m4}
-The successor to Cortex-M3 was released by ARM in 2010. This new generation called Cortex-M4 is similar to its predecessor in design and features. The instruction set now contains DSP (Digital Signal Processor) instructions for more complex data processing, and there is an optional single-precision FPU (Floating Point Unit). Variant with FPU is known as Cortex-M4F. 
+The successor to Cortex-M3 was released by ARM in 2010. This new generation called Cortex-M4 is similar to its predecessor in design and features. The instruction set now contains DSP (Digital Signal Processor) instructions for more complex data processing, and there is an optional single-precision FPU (Floating Point Unit). Variant with FPU is known as Cortex-M4F \cite{yu}. 
 	
 	\subsection{Cortex-M0}
-	\label{sub:stm_m0}		%TODO citace?
-Cortex-M0 processor is one of the smallest ARM processors available, optimized for small size and low power consumption \cite{m0_web}. The processor is based on ARMv6-M with a smaller instruction set, uses Von Neumann architecture, and has a 3-stage pipeline. This small core is ideal for general data processing tasks, where low cost and high energy efficiency matter.
+	\label{sub:stm_m0}
+Cortex-M0 processor is one of the smallest ARM processors available, optimized for small size and low power consumption. The processor is based on ARMv6-M with a smaller instruction set, uses Von Neumann architecture, and has a 3-stage pipeline. This small core is ideal for general data processing tasks, where low cost and high energy efficiency matter \cite{m0_web}.
 	
 	\subsection{Cortex-M0+}
 	\label{sub:stm_m0_plus}
-Cortex-M0+ is based on Cortex-M0, thus adopting small a size and further improving power efficiency and performance. The instruction set and tools are fully backward compatible with Cortex-M0. ARM reduced pipeline to 2 stages to lower power consumption. Furthermore, the processor has more options available, such as vector table relocation and memory protection unit (MPU).
+Cortex-M0+ is based on Cortex-M0, thus adopting small a size and further improving power efficiency and performance. The instruction set and tools are fully backward compatible with Cortex-M0. ARM reduced pipeline to 2 stages to lower power consumption. Furthermore, the processor has more options available, such as vector table relocation and memory protection unit (MPU) \cite{m0+_web}.
 	
 	\subsection{Cortex-M7F}
 	\label{sub:stm_m7}
-The most powerful processor in the Cortex-M family is Cortex-M7. The processor uses ARMv7-M architecture and features the longest pipeline with six stages. Given the used architecture, the instruction set contains DSP instructions, and there is also an optional FPU, which can be single-precision or even double-precision. Main buses have been enlarged to 64-bit wide. Variant with FPU is known as Cortex-M7F. 
+The most powerful processor in the Cortex-M family is Cortex-M7. The processor uses ARMv7-M architecture and features the longest pipeline with six stages. Given the used architecture, the instruction set contains DSP instructions, and there is also an optional FPU, which can be single-precision or even double-precision. Main buses have been enlarged to 64-bit wide. Variant with FPU is known as Cortex-M7F \cite{m7_web}. 
 	
 	\subsection{Cortex-M33F}
 	\label{sub:stm_m33}
-Cortex-M33 is the newest core used in the STM32 family of microcontrollers. The processor is based on more recent ARMv8-M architecture with Harvard bus architecture. It is conceptually similar to Cortex-M4 with a 3-stage pipeline and optional single-precision FPU. The core is ideal for IoT applications as it has optional TrustZone security instructions for hardware-enforced isolation and memory protection unit (MPU). Variant with FPU is known as Cortex-M33F. 
+Cortex-M33 is the newest core used in the STM32 family of microcontrollers. The processor is based on more recent ARMv8-M architecture with Harvard bus architecture. It is conceptually similar to Cortex-M4 with a 3-stage pipeline and optional single-precision FPU. The core is ideal for IoT applications as it has optional TrustZone security instructions for hardware-enforced isolation and memory protection unit (MPU). Variant with FPU is known as Cortex-M33F \cite{m33_web}. 
 
 \section{Architecture}
 \label{sec:stm_arch}
@@ -75,7 +75,7 @@ This approach is illustrated in figure \ref{fig:f303}, which shows the circuit d
 \begin{figure}
 \centering
 \includegraphics[width=0.6\linewidth]{support/pic/en.bd_stm32f303.jpg}
-\caption{STM32F303 circuit diagram \cite{f303_diagram}} %TODO citace - web ST
+\caption{STM32F303 circuit diagram \cite{f303_diagram}}
 \label{fig:f303}
 \end{figure}
 
@@ -87,7 +87,7 @@ The frequency of the processor, buses, and connected peripherals is derived from
 	\label{sub:nvic}
 The main controller responsible for handling interrupt events is Nested Vectored Interrupt Controller, NVIC for short. It is tightly coupled to the Cortex core allowing for low latency interrupt processing. The NVIC features support for up to 240 interrupt inputs with programmable priorities, which can be individually enabled or disabled, along with Non-Maskable Interrupts (NMI). Furthermore, in the case of Cortex M3 and M4, the interrupt latency is only 12 cycles with zero wait state memory \cite{yu}. All interrupts can be triggered by software by writing to the appropriate register; this also applies to many system exceptions. Microcontroller vendors determine the total number of interrupts supported by the device with Cortex core when designing the chip.
 
-In the  STM32 family of microcontrollers, there is also a hardware device called extended interrupts and events controller (EXTI). This controller is connected to the NVIC and supports up to 36 external/internal interrupt events. Active edge for external interrupts is programmable. This device makes it possible to generate interrupts or wake-up events from external peripherals and GPIO pins.
+In the  STM32 family of microcontrollers, there is also a hardware device called extended interrupts and events controller (EXTI). This controller is connected to the NVIC and supports up to 36~external/internal interrupt events. Active edge for external interrupts is programmable. This device makes it possible to generate interrupts or wake-up events from external peripherals and GPIO pins.
 
 	\subsection{Buses}
 	\label{sub:buses}
@@ -97,19 +97,19 @@ The primary bus interface protocol utilized is AHB Lite (Advanced High-performan
 \begin{figure}
 \centering
 \includegraphics[width=0.7\linewidth]{support/pic/f303_bus_matrix.png}
-\caption{STM32F303CC bus architecture \cite{f303_ref}} %TODO citace - referencak F303
+\caption{STM32F303CC bus architecture \cite{f303_ref}}
 \label{fig:f303_busmatrix}
 \end{figure}
 
 The secondary bus used mainly for connecting peripherals is APB (Advanced Peripheral Bus). Usually, APB buses are connected to the AHB bus matrix using bridge components. If the peripheral needs higher bandwidth and operation speed, for example, the ADC, it is possible to connect it to the faster AHB bus.
 
-Some of the more advanced Cortex processors also use other buses. For example, the Cortex-M7 has an additional 64-bit wide AXI bus that can be used for faster FLASH memory access. 
+Some of the more advanced Cortex processors also use other buses. For example, the Cortex-M7 has an additional 64-bit wide AXI bus that can be used for faster FLASH memory access \cite{m7_web}. 
 
 	\subsection{Memories}
 	\label{sub:memories}
 Thanks to the bus architecture, different memories can easily be attached to the AHB bus with suitable memory interface logic. Even though the bus is 32-bit, there are no width restrictions if appropriate conversion hardware is used.
 
-Usually, types like SRAM and FLASH are often used for data memory and program code memory, respectively. However, there is no real limitation on memory type connected to a processor, and different technologies can be utilized, e.g., SDRAM, EPROM, etc. Also, memory size is not limited. The only requirement is that the memory should be byte-addressable, and the interface has to support byte, half-word, and word transfers.
+Usually, types like SRAM and FLASH are often used for data memory and program code memory, respectively. However, there is no real limitation on memory type connected to a processor, and different technologies can be utilized, e.g., SDRAM, EPROM, etc. Also, memory size is not limited. The only requirement is that the memory should be byte-addressable, and the interface has to support byte, half-word, and word transfers \cite{yu}.
 
 	\subsection{Direct Memory Acces (DMA)}
 	\label{sub:dma}
@@ -132,7 +132,7 @@ When the pin is set as output or alternate function, it can be push-pull or open
 \begin{figure}
 \centering
 \includegraphics[width=0.9\linewidth]{support/pic/io_port.png}
-\caption{Basic structure of an I/O port bit \cite{f303_ref}} %TODO citace - referencak F303
+\caption{Basic structure of an I/O port bit \cite{f303_ref}}
 \label{fig:gpio}
 \end{figure}
 
@@ -174,6 +174,6 @@ The peripheral supports both 7-bit and 10-bit addressing modes, programmable ana
 
 	\subsection{USART}
 	\label{sub:usart}
-USART stands for Universal Synchronous/Asynchronous Receiver/Transmitter. Although computers are rarely equipped with serial ports these days, serial communication is still highly used in the embedded world as it is simple and easy to use. This peripheral is flexible and has a wide range of applications - it can be used for simple UART communication; in the synchronous mode, it can act like SPI master/slave; it also features hardware management of some signals from industry standards like RS-232 and RS-485. Moreover, there is support for Smartcard communication, IrDA serial infrared communication, and multiprocessor communication. It is also possible to use the peripheral to implement other buses with hardware control, for example, Modbus or 1-Wire.  
+USART stands for Universal Synchronous/Asynchronous Receiver/Transmitter. Although computers are rarely equipped with serial ports these days (except for the USB), serial communication is still highly used in the embedded world as it is simple and easy to use. This peripheral is flexible and has a wide range of applications - it can be used for simple UART communication; in the synchronous mode, it can act like SPI master/slave; it also features hardware management of some signals from industry standards like RS-232 and RS-485. Moreover, there is support for Smartcard communication, IrDA serial infrared communication, and multiprocessor communication. It is also possible to use the peripheral to implement other buses with hardware control, for example, Modbus or 1-Wire.  
 
 The peripheral offers many programmable parameters like baud rate, data word length, the number of stop bits, data order, parity control, or oversampling. Furthermore, USART is the source of many interrupts indicating various statuses and flags. The peripheral is connected to the DMA unit like other serial communication peripherals, significantly facilitating the handling of continuous streams or huge amounts of data.
