@@ -93,7 +93,7 @@ In the  STM32 family of microcontrollers, there is also a hardware device called
 	\label{sub:buses}
 The Cortex core has a well-defined on-chip bus structure and protocol that allows the connection of various memory configurations and peripherals. Since most of the Cortex cores use Harvard architecture, multiple bus interfaces enable simultaneous access to instructions and data. Buses are (most of the time) 32-bit wide.
 
-The primary bus interface protocol utilized is AHB Lite (Advanced High-performance Bus). This pipelined protocol allows high operation frequency with a small silicon footprint and is used in program memory and system bus interfaces. Usually, the bus can have more devices that act as a master, for example, DMA (Direct Memory Acces) or Ethernet controller. Therefore the processor includes a bus matrix (or AHB interconnect matrix) that manages transfers from multiple bus masters to different slave segments. Particular bus matrix implementation is shown in figure \ref{fig:f303_busmatrix}.
+The primary bus interface protocol utilized is AHB Lite (Advanced High-performance Bus). This pipelined protocol allows high operation frequency with a small silicon footprint and is used in program memory and system bus interfaces. Usually, the bus can have more devices that act as a master, for example, DMA (Direct Memory Access) or Ethernet controller. Therefore the processor includes a bus matrix (or AHB interconnect matrix) that manages transfers from multiple bus masters to different slave segments. Particular bus matrix implementation is shown in figure \ref{fig:f303_busmatrix}.
 \begin{figure}
 \centering
 \includegraphics[width=0.7\linewidth]{support/pic/f303_bus_matrix.png}
@@ -128,7 +128,7 @@ Each pin can be set as either input, output, or alternate function. Internal pul
 
 If the pin is in alternate function mode, it is controlled by a connected peripheral, for example, ADC, timer, or USART. Thanks to the highly flexible pin multiplexing, many peripheral functions can be remapped to another pin. Debug pins are in alternate function mode by default after microcontroller reset. Other pins are usually in floating input mode.
 
-When the pin is set as output or alternate function, it can be push-pull or open-drain. Most of the pins can provide $\pm20 \text{ mA}$ of current, making it possible to drive, for example, a LED directly. However, the total current that a microcontroller can source or sink is limited. Connecting pins to voltages higher than the supply voltage is not recommended, yet many pins are 5V tolerant.
+When the pin is set as output or alternate function, it can be push-pull or open-drain. Most of the pins can provide $\pm20 \text{ mA}$ of current, making it possible to drive, for example, a LED directly. However, the total current that a microcontroller can source or sink is limited. Connecting pins to voltages higher than the supply voltage is not recommended, yet many pins are \SI{5}{\V} tolerant.
 \begin{figure}
 \centering
 \includegraphics[width=0.9\linewidth]{support/pic/io_port.png}
@@ -149,7 +149,7 @@ As the name suggests, the advanced-control timers are the most advanced. Functio
 The Cortex core contains another 24-bit timer called SysTick timer, dedicated to real-time operating systems. It usually provides OS with regular timer interrupts for time-keeping, but it can also be used as a standard down counting timer.
 
 	\subsection{Analog-to-Digital Converter (ADC)}
-	\label{sub:adc}
+	\label{sub:st_adc}
 Another common peripheral is the Analog-to-Digital converter. This peripheral can convert a given voltage (usually between 0V and analog-reference voltage) to a binary number. One possible utilization can be reading a potentiometer voltage to obtain the trigger position.
 
 The particular implementation can vary between the STM32 series, but most of the time, they use successive-approximation ADC or Sigma-Delta ADC. It can be configured to measure either single-ended input or differential input in continuous or single-shot mode. Also, some internal channels are available, for example, connected to an internal temperature sensor and voltage reference.

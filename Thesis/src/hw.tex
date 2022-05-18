@@ -23,7 +23,7 @@ The car featured a sealed gearbox, servo, '280' size brushed motor and \SI{9.6}{
 
 \subsection{Modifications}
 \label{sub:hw_mods}
-All the electronics were removed, leaving only the plastic chassis. The broken 5-wire servo was replaced with a 'standard' size hobby servo used in most 1/10 RC cars. The old brushed motor was still functional, but it was decided to replace it with a newer and more powerful one. The only constraint was a shaft size, as the old pinion had to be transferred to the new motor to maintain functionality. Therefore a '2435' size BLDC motor with a \SI{25}{\A} ESC was selected. More information about the servo and BLDC is in sections \ref{sec:hw_servo} and \ref{sec:hw_bldc}. Furthermore, the plastic bearings were replaced by metal ball bearings.
+All the electronics were removed, leaving only the plastic chassis. The broken 5-wire servo was replaced with a 'standard' size hobby servo used in most 1/10 RC cars. The old brushed motor was still functional, but it was decided to replace it with a newer and more powerful one. The only constraint was a shaft size, as the old pinion had to be transferred to the new motor to maintain functionality. Therefore a '2435' size BLDC motor with a \SI{25}{\A} ESC (Electronic SPeed Controller) was selected. More information about the servo and BLDC is in sections \ref{sec:hw_servo} and \ref{sec:hw_bldc}. Furthermore, the plastic bearings were replaced by metal ball bearings.
 
 A 2-cell LiPo battery with a capacity of \SI{2200}{\milli\A\hour} was chosen to supply power to the electronics. According to the product specification, this battery should withstand 35C of continuous current \cite{lipo_car}. The term '35C' means '35 times the battery capacity'. For this particular battery, that means $35 \cdot \SI{2.2}{\A} = \SI{77}{\A}$ of current, which is more than sufficient.
 
@@ -51,7 +51,7 @@ Since the servo supply voltage is \SI{5}{\V}, both speed and torque values shoul
 
 \section{Motor and ESC}
 \label{sec:hw_bldc}
-As mentioned in section \ref{sub:hw_mods}, the biggest BLDC with a shaft diameter of \SI{2}{\mm} was selected to replace the old brushed one. The motor was supplied in a set including a \SI{25}{\A} Electronic Speed Controller (ESC). The type is \textit{GoolRC} 2435 \SI{4800}{\Kv}\footnote{\unit{Kv} refers to rpm/V with no load attached to the motor shaft.} BLDC; available information about the motor is in table \ref{tab:BLDC_spec} and about ESC in table \ref{tab:ESC_spec}.
+As mentioned in section \ref{sub:hw_mods}, the biggest BLDC with a shaft diameter of \SI{2}{\mm} was selected to replace the old brushed one. The motor was supplied in a set including a \SI{25}{\A} ESC. The type is \textit{GoolRC} 2435 \SI{4800}{\Kv}\footnote{\unit{Kv} refers to rpm/V with no load attached to the motor shaft.} BLDC; available information about the motor is in table \ref{tab:BLDC_spec} and about ESC in table \ref{tab:ESC_spec}.
 
 Originally the brass pinion was press-fitted to the motor; however, the shaft began to slip inside the pinion. Therefore it was soldered to the shaft with the help of solder paste and a hot-air station.
 
@@ -149,12 +149,12 @@ In addition to measuring the voltage, which is necessary for battery monitoring 
 The transmitter does not use any particular sensor; only battery voltage is measured via the voltage divider.
 
 \subsection{Current}	
-The current is measured using a module with a 30A version of an ACS712 chip from \textit{Allegro MicroSystems}. It is a small linear current sensor based on the Hall effect. Current flowing through the sensor's copper terminals generates a magnetic field, which is then sensed by the integrated Hall-effect circuit.
+The current is measured using a module with a 30A version of an ACS712 chip from \textit{Allegro MicroSystems}. It is a small linear current sensor based on the Hall effect. Current flowing through the sensor's copper terminals generates a magnetic field, which is then sensed by the integrated Hall-effect circuit. The sensor module is in figure \ref{fig:acs712}.
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.3\linewidth]{fig/acs712.jpg}
 \caption{ACS712 current sensor \cite{acs_pic}}
-\label{fig:ds18b20}
+\label{fig:acs712}
 \end{figure}
 
 The output of the sensor is a voltage proportional to the flowing current. If no current is flowing, the sensor output is the supply voltage divided by two. If a positive current flows, the output voltage increases, whereas the output voltage decreases if the current is negative.

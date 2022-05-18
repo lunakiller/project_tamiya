@@ -4,17 +4,17 @@
 
 \part{Conclusion}
 \label{chap:conclusion}
-The thesis aimed to utilize the STM32 microcontrollers to develop and control an RC car. STM32 families of microcontrollers were summarized, and their architecture and the most commonly used peripherals were briefly described. Most of the peripherals ale later used by the project.
+The thesis aimed to utilize the STM32 microcontrollers to develop and control an RC car. STM32 families of microcontrollers were summarized, and their architecture and the most commonly used peripherals were briefly described.
 
 The whole system was developed from scratch, aside from the chassis and other plastic parts. It utilizes readily available parts, including an RC servo and BLDC motor with the controller, sensor boards, and modules. These functional blocks were introduced, and their purpose and actual use were explained. Since it is an RC car, meaning 'Radio controlled', the control transmitter was developed as well.
 
 A custom control board was designed for both platforms. The car's control board is made on a perfboard and consists primarily of modules and connectors. This approach is simple, quick, flexible, and certainly sufficient for the use case. However, space constraints inside the transmitter asked for a custom PCB design that would provide better space utilization. Therefore, the circuit board was designed according to the original, slightly modified to fulfill current needs, and manufactured.
 
-The resulting RC system was to be unconventional in terms of available features. Accordingly, both the transmitter and the car received an OLED display and RGB LED to report the status. In addition, the car is equipped with various sensors. These can be theoretically replaced at any time, thanks to the use of a microcontroller. A micro SD card slot is available to record all the data.
+The resulting RC system was to be unconventional in terms of available features. Accordingly, both the transmitter and the car received an OLED display and RGB LED to report the status. In addition, the car is equipped with various sensors. A micro SD card slot is available to record all the data.
 
-After the hardware design, a control software had to be developed. As the software controls real devices in real time, it is primarily interrupt-driven and implemented with an emphasis on speed to guarantee periodic execution of the control loop and thus smooth control of the car. Nevertheless, it also tries to be user-friendly and encompasses interactive battery voltage and signal strength indicators that should simplify navigation on display along with other icons.
+After the hardware design, a control software had to be developed. As the software controls real devices in real time, it is primarily interrupt-driven and implemented with an emphasis on speed to guarantee periodic execution of the control loop and thus smooth control of the car. Nevertheless, it is also designed to be user-friendly and encompasses interactive battery voltage and signal strength indicators that should simplify navigation on display along with other icons.
 
-At the end of the thesis, the RC system is tested in real conditions with successful results. Besides the essential RC car functions, all the unconventional functions also proved to work. The car is fun to drive, and the control is responsive. The car's top speed is 35km/h, and the maximum controllable range is 375m.
+At the end of the thesis, the RC system is tested in real conditions with successful results. Besides the essential RC car functions, all the unconventional functions also proved to work. The control is responsive. The car's top speed is 35km/h, and the maximum controllable range is 375m.
 
 All the schematics, source code, and 3D models are available at a GitHub repository\footnote{\url{https://github.com/lunakiller/project_tamiya}} and on the attached DVD.
 

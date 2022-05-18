@@ -5,15 +5,15 @@
 \part{Results}
 \label{chap:results}
 \section{Overall}
-The built RC system was successfully tested in real-life conditions. The car behaves as expected from an RC car. The connection between the transmitter and the car is quickly established, even though the antenna is usually hidden under the plastic shell. The driving works flawlessly; the control is responsive and smooth. Trimming encoders can correct any misbehavior, for example, small steering to one side.
+The built RC system was successfully tested in real-life conditions. The connection between the transmitter and the car is quickly established, even though the antenna is usually hidden under the plastic shell. The driving works flawlessly; the control is responsive and smooth. Trimming encoders can correct any misbehavior, for example, small steering to one side.
 
 Suppose the signal is lost and no command arrives in \SI{250}{\ms} from the last one. In that case, the dedicated safety-timer resets actuators to their neutral position. The vehicle comes to a slow stop and waits until another command packet is successfully received.
 
 Extra features such as OLED status display with interactive indicators also work as expected and wirelessly provide the user with additional information about the RC car.
 
-Data logging to the SD card is operational, too, making it possible to record driving data and analyze them afterward. An example of the graphed output data is in the section below in figure \ref{fig:sd_speed}.
+Data logging to the SD card is operational, making it possible to record driving data and analyze them afterward. An example of the graphed output data is in the section below in figure \ref{fig:sd_speed}.
 
-The battery life was not measured as it depends on a lot of factors. However, during the testing, the car was able to drive for about an hour. The battery life of the transmitter could not even be estimated because the battery hardly needed to be charged.
+The battery life was not measured as it depends on a lot of factors. However, during the testing, the car was able to drive for about an hour. The battery life of the transmitter could not be estimated because the battery hardly needed to be charged.
 
 Furthermore, two experiments were realized to obtain maximum speed and communication range.
 
@@ -30,7 +30,7 @@ Data logging to the SD card was enabled for all three test runs to monitor batte
 \label{fig:sd_speed}
 \end{figure}
 
-Although the battery voltage dropped by approximately \SI{0.1}{\V} between runs, during all three of them, the car reached a maximum speed of \SI{35}{\km\per\hour}. Photos of the results of the runs are shown in figure \ref{fig:speed}.
+Although the battery voltage dropped by approximately \SI{0.1}{\V} between runs, during all three of them, the car reached a maximum speed of \SI{35}{km/h}. Photos of the results of the runs are shown in figure \ref{fig:speed}.
 \begin{figure}[h]
     \centering
     \begin{subfigure}{0.3\textwidth}
