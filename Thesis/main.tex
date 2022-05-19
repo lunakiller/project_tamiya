@@ -1,0 +1,209 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Parametrization
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\def\lang{EN} % The language: CZ = Czech, EN = English
+
+\def\faculty{Faculty of Electrical Engineering} % Full faculty/or institute name 
+\def\department{Department of Electric Drives and Traction} % Full name of the department
+
+\def\worktype{Bachelor's thesis}  % Type: Bachelor's thesis, Master's thesis, ...
+\def\title{Development of RC car controlled by STM32 microcontrollers} % Thesis name
+\def\subtitle{} % Optional subtitle
+
+\def\author{Kristi\'{a}n \v{S}lehofer} % Name of the author
+\def\date{May 2022} % Date 
+
+\def\supervisor{Ing. Jan Stejskal} % Supervisor name
+\def\supervisorspecialist{} % Optional name of supervisor specialist
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Document class
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass[11pt,a4paper,twoside]{CTUthesis}
+\usepackage[utf8]{inputenc}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% User packages
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{times} % times font
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{subcaption}
+\usepackage{cite}
+%\usepackage[anythingbreaks]{breakurl}
+\usepackage{url}
+\usepackage{mathtools, nccmath}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{multirow}
+
+\usepackage{booktabs}
+
+\usepackage{pdfpages}
+
+\usepackage{tablefootnote} % for table footnotes
+\usepackage{xurl}	% for too long urls
+\usepackage{siunitx}	
+	\DeclareSIUnit{\Kv}{Kv}
+\usepackage{bytefield}
+\usepackage[square,numbers]{natbib}
+
+\usepackage[edges]{forest} % for directory tree, https://tex.stackexchange.com/questions/328886/making-a-directory-tree-of-folders-and-files/328987#328987, https://tex.stackexchange.com/questions/405192/how-to-insert-folder-icon-in-root-node-with-forest-package/405253#405253
+\definecolor{folderbg}{RGB}{124,166,198}
+\definecolor{folderborder}{RGB}{110,144,169}
+\newlength\Size
+\setlength\Size{4pt}
+\tikzset{%
+  folder/.pic={%
+    \filldraw [draw=folderborder, top color=folderbg!50, bottom color=folderbg] (-1.05*\Size,0.2\Size+5pt) rectangle ++(.75*\Size,-0.2\Size-5pt);
+    \filldraw [draw=folderborder, top color=folderbg!50, bottom color=folderbg] (-1.15*\Size,-\Size) rectangle (1.15*\Size,\Size);
+  },
+  file/.pic={%
+    \filldraw [draw=folderborder, top color=folderbg!5, bottom color=folderbg!10] (-\Size,.4*\Size+5pt) coordinate (a) |- (\Size,-1.2*\Size) coordinate (b) -- ++(0,1.6*\Size) coordinate (c) -- ++(-5pt,5pt) coordinate (d) -- cycle (d) |- (c) ;
+  },
+}
+\forestset{%
+  declare autowrapped toks={pic me}{},
+  declare boolean register={pic root},
+  pic root=1,
+  pic dir tree/.style={%
+    for tree={%
+      folder,
+      font=\ttfamily,
+      grow'=0,
+      s sep=0.5mm, inner sep=3
+    },
+    before typesetting nodes={%
+      for tree={%
+        edge label+/.option={pic me},
+      },
+      if pic root={
+        tikz+={
+          \pic at ([xshift=\Size].west) {folder};
+        },
+        align={l}
+      }{},
+    },
+  },
+  pic me set/.code n args=2{%
+    \forestset{%
+      #1/.style={%
+        inner xsep=2\Size,
+        pic me={pic {#2}},
+      }
+    }
+  },
+  pic me set={directory}{folder},
+  pic me set={file}{file},
+}
+
+\newlength\mystoreparindent
+\newenvironment{myparindent}[1]{%
+\setlength{\mystoreparindent}{\the\parindent}
+\setlength{\parindent}{#1}
+}{%
+\setlength{\parindent}{\mystoreparindent}
+}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% MY COMMANDS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{xspace}
+%\usepackage[T1]{fontenc}
+
+\newcommand{\disable}[1]{}
+
+\newcommand{\revise}[1]{{\color{blue}#1}}
+\newcommand{\rewrite}[1]{{\color{red}#1}}
+\newcommand{\todo}[1]{{\color{red}\colorbox{yellow}{\textbf{TODO:}}\color{red}#1}}
+
+% improved colomns
+\newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+
+% improved cline
+%\newlength{\Oldarrayrulewidth}
+%\newcommand{\Cline}[2]{%
+%  \noalign{\global\setlength{\Oldarrayrulewidth}{\arrayrulewidth}}%
+%  \noalign{\global\setlength{\arrayrulewidth}{#1}}\cline{#2}%
+%  \noalign{\global\setlength{\arrayrulewidth}{\Oldarrayrulewidth}}}
+
+\begin{document}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Document head
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\TitlePage
+%\setboolean{@twoside}{false}
+
+%% thesis assignment %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage\null\thispagestyle{empty}\newpage\addtocounter{page}{-1}
+\includepdf[pages=-, offset=+11 0]{src/Thesis_Assignment.pdf}
+
+\begin{document_head}
+%% declaration, acknowledgement, abstract %%%%%%%%%%%%%%%
+	\newpage
+	\input{src/declaration}
+	\newpage
+	\input{src/acknowledgement}
+	\newpage
+	\input{src/abstract_cz}
+	\newpage
+	\input{src/abstract_en}
+	\newpage
+	
+%% table of contents %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	\tableofcontents
+	\newpage
+%% list of figures %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
+	\listoffigures
+	\newpage
+%% list of tables %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
+	\listoftables
+	\newpage
+%% list of listings %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
+%	\listoflistings
+%% list of abbreviations
+	\input{src/abbreviations}
+
+%% for printing purposes it is possible to use this line between individual inputs to achieve all-double page printing
+%\newpage\null\thispagestyle{empty}\newpage\addtocounter{page}{-1}
+\end{document_head}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Document body
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document_body}
+  	\input{src/introduction.tex}
+	\clearpage
+%	\newpage\null\thispagestyle{empty}\newpage\addtocounter{page}{-1}
+	\input{src/stm32.tex}
+	\clearpage
+	\input{src/hw.tex}
+	\clearpage
+	\input{src/realization.tex}
+	\clearpage
+	\input{src/software.tex}
+	\clearpage
+	\input{src/results.tex}
+	\clearpage
+	\input{src/conclusion.tex}
+	\clearpage
+    
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% References
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \bibliography{main}
+    \bibliographystyle{unsrtnat} %use either 'unsrt', 'IEEEtran' or 'named'
+    \clearpage
+\end{document_body}
+ 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Appendices
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%\begin{document_appendices}
+%    \input{src/appendix_a}
+
+%\end{document_appendices}
+\end{document}
