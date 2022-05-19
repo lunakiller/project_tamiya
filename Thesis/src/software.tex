@@ -19,7 +19,7 @@ Software for both the transmitter and car is in their respective folders. STM32C
 Therefore both project folders in the \textit{'Software'} folder contain the \textit{'Drivers'} folder with ARM and HAL drivers for the board, the \textit{'Inc'} folder with header files, and the \textit{'Src'} folder with source files. The startup file, makefile, linker script, and CubeMX project file are in the root folder. As the car implements FatFs driver, it is located mainly in the \textit{'Middlewares'} folder.
 
 The \textit{'shared\_libs'} folder contains shared libraries for both applications, namely the nRF24 module and OLED display libraries, and follows the same file structure; the \textit{'Inc'} folder contains header files and the \textit{'Src'} folder source files. Icons used on the OLED display are in the dedicated \textit{'logos'} folder inside the \textit{'Inc'} folder.
-
+\newpage
 In addition, there are three important files:
 \begin{itemize}
 	\item \begin{description}
@@ -141,6 +141,7 @@ In the final part of initialization, all the timers, including the timers used f
 
 \subsection{Main control loop}
 The control loop is designed to be as non-blocking and interrupt-driven as possible. Therefore, it consists of a set of 'if' blocks. However, some parts remained blocking. The reason is some of the drivers are blocking and do not allow the use of DMA. Rewriting them was hardly possible or too time-consuming. This is especially true for OLED refreshing, which takes the longest time. Execution of given 'if' block is controlled by flags, internally boolean values, set by appropriate interrupt routines.
+\newpage
 \begin{itemize}
 	\item \begin{description}
 \item[\textit{'trigger\_data\_rdy'}:]
@@ -220,7 +221,7 @@ This status is visualized on the OLED screen and by changing the color of the st
 Both the RGB LED and OLED display are used to visualize the current status. The reasons for the choice are discussed in section \ref{sec:hw_status}.
 
 The RGB LED is clearly visible and serves as a quick notification of the communication and the transmitter's battery status. Color options and their meaning are described in table \ref{tab:led_status}.
-\begin{table}[ht]
+\begin{table}[h]
    \renewcommand{\arraystretch}{1.1}
    \centering
     \caption{Explanation of LED status}\label{tab:led_status}   
@@ -244,7 +245,7 @@ The rest of the screen is separated by a line and belongs to the transmitter sta
 Both battery indicators are interactive and, depending on the voltage, up to 4 bars are displayed. If the battery voltage drops below the threshold of \SI{6.8}{\V}, a flashing exclamation mark is displayed in the battery logo instead. The signal quality indicator is also interactive.
 
 All logos were created in GIMP and exported as XBM files. These were later 'converted' to header files by changing the file extension. Examples of the display interface are in figure \ref{fig:tx_oled}.
-\begin{figure}[t]
+\begin{figure}[h]
     \centering
     \begin{subfigure}{0.35\textwidth}
     \centering
@@ -267,6 +268,7 @@ One of the UARTs is utilized for printing debug information. Corresponding pins 
 The printing is enabled by default after the application start and prints the initialization progress. Afterward, the printing is dependent on the state of the Switch1 (the first lever on the DIP switch SW2).
 
 The UART is deinitialized before entering the main control loop if the switch is in the off position or stays initialized otherwise. If debug prints are enabled, the transmitter informs about:
+\newpage
 \begin{itemize}
 \item LiPo battery voltage and VDDA voltage whenever new data is available,
 \item encoder rotation,
