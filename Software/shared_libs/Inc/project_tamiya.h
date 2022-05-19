@@ -32,11 +32,12 @@
 #define PT_nRF24_PACKET_SIZE  4
 
 // maximum range constrained by mechanical limits
-#define PT_MAXSTEER           300
+#define PT_MAXSTEER           400
 #define PT_MAXTHRTL           450
 
 // RC servo control neutral (equals to 1.5ms pulsewidth)
-#define PT_RC_NEUTRAL         1500
+#define PT_MOTOR_NEUTRAL      1485
+#define PT_SERVO_NEUTRAL      1400
 
 // maximum values from control triggers
 #define PT_TX_STEER_RANGE     935
