@@ -6,6 +6,8 @@
 
   (title_block
     (title "ProjectTamiya - Car")
+    (date "2022-05-18")
+    (rev "1")
   )
 
   (lib_symbols
@@ -3234,9 +3236,9 @@
     (property "Datasheet" "https://stm32-base.org/assets/pdf/boards/original-schematic-STM32F303CCT6-RobotDyn_Black_Pill.pdf" (id 3) (at 67.31 140.335 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (pin "3V3" (uuid 65687ec0-4a4c-4a03-9508-16d0a16a7f37))
-    (pin "3V3" (uuid 65687ec0-4a4c-4a03-9508-16d0a16a7f37))
-    (pin "3V3" (uuid 65687ec0-4a4c-4a03-9508-16d0a16a7f37))
+    (pin "3V3" (uuid 65687ec0-4a4c-4a03-9508-16d0a16a7f3b))
+    (pin "3V3" (uuid 65687ec0-4a4c-4a03-9508-16d0a16a7f3b))
+    (pin "3V3" (uuid 65687ec0-4a4c-4a03-9508-16d0a16a7f3b))
     (pin "5V" (uuid 6744f1a8-2aa0-40f6-b42d-f7b93e51a2a2))
     (pin "A0" (uuid e293f5ce-0a46-4cfe-9d0a-6b565020c901))
     (pin "A1" (uuid c8fb1285-73d8-4268-b1b6-64297742af06))
@@ -3271,10 +3273,10 @@
     (pin "C14" (uuid eb34a573-3dc9-4321-8cf8-3e055a2d7d3a))
     (pin "C15" (uuid 0f87af32-adbc-4344-8059-c0e47923ee00))
     (pin "DIO" (uuid 1cd56325-ec09-4eec-a88b-bafa6f9b35bc))
-    (pin "GND" (uuid bef4ddf7-aed4-40ec-a9b1-74f5a56667e0))
-    (pin "GND" (uuid bef4ddf7-aed4-40ec-a9b1-74f5a56667e0))
-    (pin "GND" (uuid bef4ddf7-aed4-40ec-a9b1-74f5a56667e0))
-    (pin "GND" (uuid bef4ddf7-aed4-40ec-a9b1-74f5a56667e0))
+    (pin "GND" (uuid bef4ddf7-aed4-40ec-a9b1-74f5a56667e6))
+    (pin "GND" (uuid bef4ddf7-aed4-40ec-a9b1-74f5a56667e6))
+    (pin "GND" (uuid bef4ddf7-aed4-40ec-a9b1-74f5a56667e6))
+    (pin "GND" (uuid bef4ddf7-aed4-40ec-a9b1-74f5a56667e6))
     (pin "RST" (uuid 302c4e8f-7a2e-4a43-91e2-b2d908c406d7))
     (pin "SCK" (uuid d59d5dd1-de6d-4fd2-970c-70e9f97df458))
     (pin "VBT" (uuid 40fd04c6-0652-468e-b9cd-9e0e613c0bcd))
