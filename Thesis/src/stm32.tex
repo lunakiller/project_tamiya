@@ -4,9 +4,9 @@
 
 \part{STM32 microcontrollers}
 \label{chap:STM}
-\section{Indroduction}
+\section{Introduction}
 \label{sec:stm_intro}
-STM32 is a family of 32-bit microcontrollers by STMicroelectronics based on ARM Cortex-M processor, namely Cortex-M3, Cortex-M4(F), Cortex-M0, Cortex-M0+, Cortex-M7F, and Cortex-M33F. The STM32 family consists of numerous series of microcontrollers designed for various use-cases. These can be divided into four main groups: Mainstream, High Performance, Ultra-low-power, and Wireless series. As every series has specific features and peripherals, this section will only focus on the main differences between used ARM Cortex cores. Table \ref{tab:cortex} shows the utilization of ARM cores in the particular STM32 series.
+STM32 is a family of 32-bit microcontrollers by STMicroelectronics based on ARM Cortex-M processor, namely Cortex-M3, Cortex-M4(F), Cortex-M0, Cortex-M0+, Cortex-M7F, and Cortex-M33F. The STM32 family consists of numerous series of microcontrollers designed for various use-cases. These can be divided into four main groups: Mainstream, High Performance, Ultra-low-power, and~Wireless series. As every series has specific features and peripherals, this section will only focus on the~main differences between used ARM Cortex cores. Table \ref{tab:cortex} shows the utilization of ARM cores in the particular STM32 series.
 %\begin{table}[ht]
 %\begin{ctucolortab}
 %\begin{tabular}{cc}
@@ -61,7 +61,7 @@ Cortex-M0+ is based on Cortex-M0, thus adopting small a size and further improvi
 	
 	\subsection{Cortex-M7F}
 	\label{sub:stm_m7}
-The most powerful processor in the Cortex-M family is Cortex-M7. The processor uses ARMv7-M architecture and features the longest pipeline with six stages. Given the used architecture, the instruction set contains DSP instructions, and there is also an optional FPU, which can be single-precision or even double-precision. Main buses have been enlarged to 64-bit wide. Variant with FPU is known as Cortex-M7F \cite{m7_web}. 
+The most powerful processor in the Cortex-M family is Cortex-M7. The processor uses \mbox{ARMv7-M} architecture and features the longest pipeline with six stages. Given the used architecture, the instruction set contains DSP instructions, and there is also an optional FPU, which can be single-precision or even double-precision. Main buses have been enlarged to 64-bit wide. Variant with FPU is known as~Cortex-M7F \cite{m7_web}. 
 	
 	\subsection{Cortex-M33F}
 	\label{sub:stm_m33}
@@ -69,7 +69,7 @@ Cortex-M33 is the newest core used in the STM32 family of microcontrollers. The 
 
 \section{Architecture}
 \label{sec:stm_arch}
-ARM as a company does not construct microcontrollers but instead designs the core and other components and licenses them to silicon designers. It is the same concept with the STM32 family of microcontrollers - ST Microelectronics obtains the processor design from ARM as a base for their microcontroller. The company then attaches its own set of memories and peripherals, such as ADC (Analog-to-Digital converter), DAC (Digital-to-Analog converter), clock generation and timers, and various types of connectivity peripherals like UART, SPI, I2C, etc.
+ARM as a company does not construct microcontrollers but instead designs the core and other components and licenses them to silicon designers. It is the same concept with the STM32 family of microcontrollers - ST Microelectronics obtains the processor design from ARM as a base for their microcontroller. The company then attaches its own set of memories and peripherals, such as ADC (Analog-to-Digital converter), DAC (Digital-to-Analog converter), clock generation and timers, and various types of connectivity peripherals like UART, SPI, I\textsuperscript{2}C, etc.
 
 This approach is illustrated in figure \ref{fig:f303}, which shows the circuit diagram of the STM32F303CC microcontroller used in this project. It shows the Cortex-M4F processor with all the ST-specific peripherals and memories around.
 \begin{figure}
@@ -91,17 +91,17 @@ In the  STM32 family of microcontrollers, there is also a hardware device called
 
 	\subsection{Buses}
 	\label{sub:buses}
-The Cortex core has a well-defined on-chip bus structure and protocol that allows the connection of various memory configurations and peripherals. Since most of the Cortex cores use Harvard architecture, multiple bus interfaces enable simultaneous access to instructions and data. Buses are (most of the time) 32-bit wide.
+The Cortex core has a well-defined on-chip bus structure and protocol that allows the connection of~various memory configurations and peripherals. Since most of the Cortex cores use Harvard architecture, multiple bus interfaces enable simultaneous access to instructions and data. Buses are (most of the time) 32-bit wide.
 
-The primary bus interface protocol utilized is AHB Lite (Advanced High-performance Bus). This pipelined protocol allows high operation frequency with a small silicon footprint and is used in program memory and system bus interfaces. Usually, the bus can have more devices that act as a master, for example, DMA (Direct Memory Access) or Ethernet controller. Therefore the processor includes a bus matrix (or AHB interconnect matrix) that manages transfers from multiple bus masters to different slave segments. Particular bus matrix implementation is shown in figure \ref{fig:f303_busmatrix}.
-\begin{figure}
+The primary bus interface protocol utilized is AHB Lite (Advanced High-performance Bus). This~pipelined protocol allows high operation frequency with a small silicon footprint and is used in program memory and system bus interfaces. Usually, the bus can have more devices that act as a master, for example, DMA (Direct Memory Access) or Ethernet controller. Therefore, the processor includes a bus matrix (or AHB interconnect matrix) that manages transfers from multiple bus masters to different slave segments. Particular bus matrix implementation is shown in figure \ref{fig:f303_busmatrix}.
+\begin{figure}[h]
 \centering
 \includegraphics[width=0.7\linewidth]{support/pic/f303_bus_matrix.png}
 \caption{STM32F303CC bus architecture \cite{f303_ref}}
 \label{fig:f303_busmatrix}
 \end{figure}
 
-The secondary bus used mainly for connecting peripherals is APB (Advanced Peripheral Bus). Usually, APB buses are connected to the AHB bus matrix using bridge components. If the peripheral needs higher bandwidth and operation speed, for example, the ADC, it is possible to connect it to the faster AHB bus.
+The secondary bus used mainly for connecting peripherals is APB (Advanced Peripheral Bus). Usually, APB buses are connected to the AHB bus matrix using bridge components. If the peripheral needs higher bandwidth and operation speed, for example, the ADC, it is possible to connect it directly to the faster AHB bus.
 
 Some of the more advanced Cortex processors also use other buses. For example, the Cortex-M7 has an additional 64-bit wide AXI bus that can be used for faster FLASH memory access \cite{m7_web}. 
 
@@ -150,27 +150,27 @@ The Cortex core contains another 24-bit timer called SysTick timer, dedicated to
 
 	\subsection{Analog-to-Digital Converter (ADC)}
 	\label{sub:st_adc}
-Another common peripheral is the Analog-to-Digital converter. This peripheral can convert a given voltage (usually between 0V and analog-reference voltage) to a binary number. One possible utilization can be reading a potentiometer voltage to obtain the trigger position.
+Another common peripheral is the Analog-to-Digital converter. This peripheral can convert a given voltage (usually between \SI{0}{\V} and VDDA) to a binary number. One possible utilization can be reading a potentiometer voltage to obtain the trigger position.
 
-The particular implementation can vary between the STM32 series, but most of the time, they use successive-approximation ADC or Sigma-Delta ADC. It can be configured to measure either single-ended input or differential input in continuous or single-shot mode. Also, some internal channels are available, for example, connected to an internal temperature sensor and voltage reference.
+The particular implementation can vary between the STM32 series, but most of the time, they use successive-approximation ADC or Sigma-Delta ADC. It can be configured to measure either single-ended input or differential input in continuous or single-shot mode. Also, some internal channels are~available, for example, connected to an internal temperature sensor and voltage reference.
 
 An internal ADC self-calibration is a convenient feature that can compensate for offset and gain error and significantly improve conversion accuracy. The calibration is triggered by software. If the application has to handle a large amount of data, the DMA unit can serve the ADC memory transfers to free the CPU. Moreover, an analog watchdog feature can monitor the converted voltage and generate an interrupt if it exceeds the programmed thresholds. 
 
 	\subsection{Digital-to-Analog Converter (DAC)}
 	\label{sub:dac}
-The Digital-to-Analog converter does the exact opposite of the Analog-to-Digital converter. It converts the given binary number to a corresponding analog voltage. It is possible to generate complex waveforms or an audio signal with this peripheral. The DAC can therefore be used in many audio applications. If at least two channels are available, the conversion can be independent or simultaneous with external triggers, providing the ability to generate a stereo audio signal. Usually, the DAC also features a noise-wave generation or a triangular-wave generation. Such as with the ADC, the DAC memory transfers can be controlled by DMA, thus freeing up the CPU.
+The Digital-to-Analog converter does the exact opposite of the Analog-to-Digital converter. It converts the given binary number to a corresponding analog voltage. It is possible to generate complex waveforms or an audio signal with this peripheral. The DAC can therefore be used in many audio applications. If at least two channels are available, the conversion can be independent or simultaneous with external triggers, providing the ability to generate a stereo audio signal. Usually, the DAC also features a noise-wave generation or a triangular-wave generation. Such as with the ADC, the DAC memory transfers can be controlled by DMA, thus freeing up the processor.
 
 	\subsection{Serial Peripheral Interface (SPI)}
 	\label{sub:spi}
-The serial peripheral interface is a master-slave interface bus used to communicate with smaller devices, such as sensors, memories, displays, or LED drivers. If supported by a particular microcontroller, the peripheral can also be configured as an I2S (Inter-Integrated Sound) interface, allowing the connection of digital audio devices.
+The serial peripheral interface is a master-slave interface bus used to communicate with smaller devices, such as sensors, memories, displays, or LED drivers. If supported by a particular microcontroller, the peripheral can also be configured as an I\textsuperscript{2}S (Inter-Integrated Sound) interface, allowing the connection of digital audio devices.
 
 Peripheral settings are rich to support a wide range of compatible devices. It can operate either as a master, providing a clock to connected devices, or as a slave; multimaster mode is also possible. Communication mode and speed can be configured as well as frame size and clock polarity. The DMA unit can help handle a lot of data and achieve high data communication rates with hardware control. Moreover, the SPI peripheral includes a hardware CRC unit with automatic CRC error checking. This feature can be helpful when communicating with SD memory cards.
 
-	\subsection{Inter-Integrated Circuit (I2C)}
+	\subsection{Inter-Integrated Circuit (I\textsuperscript{2}C)}
 	\label{sub:i2c}
-The Inter-Integrated Circuit is another commonly used short-range communication bus in embedded systems. It is also a synchronous interface that requires fewer communication wires than SPI but provides lower communication rates. As the SPI interface, the I2C can be used to communicate with small displays, memories, and other rather lower-speed devices.
+The Inter-Integrated Circuit is another commonly used short-range communication bus in embedded systems. It is also a synchronous interface that requires fewer communication wires than SPI but~provides lower communication rates. As the SPI interface, the I\textsuperscript{2}C can be used to communicate with small displays, memories, and other rather lower-speed devices.
 
-The peripheral supports both 7-bit and 10-bit addressing modes, programmable analog and digital noise filters, and configurable multiple speed modes depending on the particular microcontroller. Furthermore, the peripheral includes a hardware CRC unit, and it is designed to support SMBus and PMBus protocols used by PCs and servers. DMA channel connecting I2C is also available to provide hardware control of transfers.
+The peripheral supports both 7-bit and 10-bit addressing modes, programmable analog and digital noise filters, and configurable multiple speed modes depending on the particular microcontroller. Furthermore, the peripheral includes a hardware CRC unit, and it is designed to support SMBus and PMBus protocols used by PCs and servers. DMA channel connecting I\textsuperscript{2}C is also available to provide hardware control of transfers.
 
 	\subsection{USART}
 	\label{sub:usart}

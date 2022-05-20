@@ -11,9 +11,15 @@ Suppose the signal is lost and no command arrives in \SI{250}{\ms} from the last
 
 Extra features such as OLED status display with interactive indicators also work as expected and wirelessly provide the user with additional information about the RC car.
 
-Data logging to the SD card is operational, making it possible to record driving data and analyze them afterward. An example of the graphed output data is in the section below in figure \ref{fig:sd_speed}.
+Data logging to the SD card is operational, making it possible to record driving data and analyze them afterward. An example of the graphed output data is below in figure \ref{fig:data_graph}.
+\begin{figure}[h]
+\centering
+\includegraphics[width=1\linewidth]{fig/run.pdf}
+\caption{Example of graphed data}
+\label{fig:data_graph}
+\end{figure}
 
-The battery life was not measured as it depends on a lot of factors. However, during the testing, the car was able to drive for about an hour. The battery life of the transmitter could not be estimated because the battery hardly needed to be charged.
+The battery life was not measured as it depends on a lot of factors. However, during the testing, the car was able to drive for about an hour. The battery life of the transmitter was not estimated because the battery hardly needed to be charged.
 
 Furthermore, two experiments were realized to obtain maximum speed and communication range.
 
@@ -22,32 +28,35 @@ The car's maximum speed was tested in Ladronka park on a flat asphalt cycle path
 
 The car accelerated quickly and drove in a straight line with the full throttle until it stopped accelerating visually. Then the throttle was released, and the car performed a U-turn and began accelerating again. This process was repeated at least two times in each run.
 
-Data logging to the SD card was enabled for all three test runs to monitor battery voltage, as the motor's maximum speed depends on its supply voltage. Measured data from the last run are graphed in figure \ref{fig:sd_speed}. The test scheme described above is clearly visible - negative peaks in \textit{'STEER'} data paired with positive peaks in \textit{'GYRO\_Z'} data represent U-turns; saturated \textit{'THRTL'} with \textit{'VOLTAGE'} drops and \textit{'CURRENT'} peaks represent straight-line accelerations.
-\begin{figure}[h]
-\centering
-\includegraphics[width=1\linewidth]{fig/run3.pdf}
-\caption{Data from last speed-test run}
-\label{fig:sd_speed}
-\end{figure}
-
+Data logging to the SD card was enabled for all three test runs to monitor battery voltage, as the motor's maximum speed depends on its supply voltage.
+%Measured data from the last run are graphed in figure \ref{fig:sd_speed}. The test scheme described above is clearly visible - negative peaks in \textit{'STEER'} data paired with positive peaks in \textit{'GYRO\_Z'} data represent U-turns; saturated \textit{'THRTL'} with \textit{'VOLTAGE'} drops and \textit{'CURRENT'} peaks represent straight-line accelerations.
+%\begin{figure}[h]
+%\centering
+%\includegraphics[width=1\linewidth]{fig/run3.pdf}
+%\caption{Data from last speed-test run}
+%\label{fig:sd_speed}
+%\end{figure}
 Although the battery voltage dropped by approximately \SI{0.1}{\V} between runs, during all three of them, the car reached a maximum speed of \SI{35}{km/h}. Photos of the results of the runs are shown in figure \ref{fig:speed}.
 \begin{figure}[h]
     \centering
-    \begin{subfigure}{0.3\textwidth}
+    \begin{subfigure}{0.32\textwidth}
     \centering
-        \includegraphics[width=1\textwidth]{fig/speed_run1.jpg}
+%        \includegraphics[width=1\textwidth]{fig/speed_run1.jpg}
+        \includegraphics[width=1\textwidth]{fig/speed_run1_cut.jpg}
 		\caption{test run 1}
     \end{subfigure}%
-    \hspace{0.2cm}
-    \begin{subfigure}{0.3\textwidth}
+    \hspace{0.1cm}
+    \begin{subfigure}{0.32\textwidth}
     \centering
-		\includegraphics[width=1\textwidth]{fig/speed_run2.jpg}
+%		\includegraphics[width=1\textwidth]{fig/speed_run2.jpg}
+		\includegraphics[width=1\textwidth]{fig/speed_run2_cut.jpg}
 		\caption{test run 2}
     \end{subfigure}
-    \hspace{0.2cm}
-    \begin{subfigure}{0.3\textwidth}
+    \hspace{0.1cm}
+    \begin{subfigure}{0.32\textwidth}
     \centering
-		\includegraphics[width=1\textwidth]{fig/speed_run3.jpg}
+%		\includegraphics[width=1\textwidth]{fig/speed_run3.jpg}
+		\includegraphics[width=1\textwidth]{fig/speed_run3_cut.jpg}
 		\caption{test run 3}
     \end{subfigure}
 	\caption{Results of the speed test}
@@ -55,25 +64,11 @@ Although the battery voltage dropped by approximately \SI{0.1}{\V} between runs,
 \end{figure}
 
 \section{Range}
-The range test was also performed in Ladronka park. The test is mainly informative since the car is barely visible at about \SI{250}{\m}. The expected maximum range given by used communication modules was \SI{800}{\m}; therefore, the distance was calculated from GPS coordinates.
+The range test was also performed in Ladronka park. The test is mainly informative since the car is~barely visible at about \SI{250}{\m}. The expected maximum range given by used communication modules was \SI{800}{\m}; therefore, the distance was calculated from GPS coordinates.
 
 The test utilized the vehicle's signal loss detection feature. The transmitter was configured to send the steering command to keep the front wheels turned. The signal loss was easily recognizable since the signal loss detection feature resets the motor and straightens the servo. Both antennas were in a vertical position during the test for the best signal reception.
 
 First, coordinates of the transmitter's initial position were acquired. Then the chassis was moved in a straight direction to keep the transmitter in sight until the signal began to fade.
-
-After \SI{375}{\m}, the servo started to straighten occasionally, indicating that no command packet was received within \SI{250}{\ms} from the last one. Even though the safety-timer sometimes reset the car, it was still controllable.
-
-After \SI{603}{\m} from the initial position, the signal suffered frequent outages. The car was in a 'no signal' state more than 50\% of the time, making the control difficult.
-
-The maximum range was measured at \SI{763}{\m}. At this distance, the signal was not completely lost. Infrequently, the command packet was successfully received, but the car remained in a 'no signal' state most of the time, making the control almost impossible.
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.9\linewidth]{fig/control_range.png}
-\caption{Control distance}
-\label{fig:control_range}
-\end{figure}
-
-GPS coordinates along with the calculated distance from the initial position are in table \ref{tab:gps_dist}. The measured control distance is visualized in figure \ref{fig:control_range}. 
 \begin{table}[h]
    \renewcommand{\arraystretch}{1.1}
    \centering
@@ -89,3 +84,17 @@ signal 'lost'		& 50.0794572N, 14.3609497E	& \SI{763.2}{\m} \\
        \noalign{\smallskip}\noalign{\hrule height 1.1pt}
     \end{tabular}
 \end{table} 
+
+After \SI{375}{\m}, the servo started to straighten occasionally, indicating that no command packet was received within \SI{250}{\ms} from the last one. Even though the safety-timer sometimes reset the car, it was still controllable.
+
+After \SI{603}{\m} from the initial position, the signal suffered frequent outages. The car was in a 'no signal' state more than 50\% of the time, making the control difficult.
+
+The maximum range was measured at \SI{763}{\m}. At this distance, the signal was not completely lost. Infrequently, the command packet was successfully received, but the car remained in a 'no signal' state most of the time, making the control almost impossible.
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\linewidth]{fig/control_range.png}
+\caption{Controllable distance}
+\label{fig:control_range}
+\end{figure}
+
+GPS coordinates along with the calculated distance from the initial position are in table \ref{tab:gps_dist}. The measured control distance is visualized in figure \ref{fig:control_range}. 
